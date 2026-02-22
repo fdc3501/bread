@@ -33,7 +33,7 @@ export const Sparkline: React.FC<Props> = ({
     width = 90,
     height = 36,
 }) => {
-    const BOTTOM_PAD = showXLabels ? 42 : 10;
+    const BOTTOM_PAD = showXLabels ? 55 : 10;
     const PAD = { top: 6, right: 6, bottom: BOTTOM_PAD, left: 24 };
     const W = width;
     const H = height;
@@ -41,7 +41,8 @@ export const Sparkline: React.FC<Props> = ({
     const hasData = data.some(d => d.prod > 0);
     if (!hasData) return <div className="sparkline-empty">데이터 없음</div>;
 
-    const maxY = Math.max(...data.map(d => d.prod), 1);
+    const allValues = data.flatMap(d => [d.prod || 0, d.disp || 0, d.rem || 0]);
+    const maxY = Math.max(...allValues, 1);
     const innerW = W - PAD.left - PAD.right;
     const innerH = H - PAD.top - PAD.bottom;
     const xStep = data.length > 1 ? innerW / (data.length - 1) : innerW;
@@ -81,15 +82,23 @@ export const Sparkline: React.FC<Props> = ({
                 const weatherIcon = d.weather ? (WEATHER_ICONS[d.weather] ?? '') : '';
                 return (
                     <g key={i}>
-                        <text x={x} y={PAD.top + innerH + 11} className="spark-xlabel" textAnchor="middle"
+                        <text x={x} y={PAD.top + innerH + 12} className="spark-xlabel" textAnchor="middle"
                             fill={isWeekend ? '#f39c12' : 'rgba(255,255,255,0.7)'}>
                             {dayLabel}
                         </text>
-                        {weatherIcon && (
-                            <text x={x} y={PAD.top + innerH + 25} className="spark-xlabel-weather" textAnchor="middle" style={{ fontSize: '12px' }}>
-                                {weatherIcon}
-                            </text>
-                        )}
+                        <foreignObject x={x - 10} y={PAD.top + innerH + 22} width={20} height={20}>
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                fontSize: '16px',
+                                width: '100%',
+                                height: '100%',
+                                cursor: 'default'
+                            }}>
+                                {weatherIcon || (d.date ? '❓' : '')}
+                            </div>
+                        </foreignObject>
                     </g>
                 );
             })}

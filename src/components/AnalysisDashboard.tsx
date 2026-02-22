@@ -299,8 +299,8 @@ const AnalysisDashboard: React.FC<Props> = ({ history }) => {
                                                     <Sparkline
                                                         data={getSparklineData(rec.breadId)}
                                                         showXLabels={true}
-                                                        width={220}
-                                                        height={70}
+                                                        width={240}
+                                                        height={100}
                                                     />
                                                 </div>
                                             </div>
