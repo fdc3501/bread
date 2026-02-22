@@ -1,0 +1,522 @@
+@import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap');
+
+:root {
+  --primary: #8b5e3c;
+  --secondary: #d4a373;
+  --bg-dark: #1a1a1a;
+  --bg-card: #2d2d2d;
+  --text-main: #f5ebe0;
+  --text-muted: #a9a9a9;
+  --border: #3d3d3d;
+  --accent: #e9edc6;
+  --success: #606c38;
+  --error: #bc6c25;
+}
+
+body {
+  font-family: 'Pretendard', sans-serif;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  margin: 0;
+}
+
+.app-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Header */
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid var(--primary);
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+  gap: 20px;
+}
+
+/* Save Button */
+.save-btn {
+  background: #444;
+  color: #ccc;
+  border: 1px solid #555;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: bold;
+}
+
+.save-btn.dirty {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+  box-shadow: 0 0 10px rgba(200, 169, 110, 0.3);
+}
+
+.save-btn:hover {
+  background: #555;
+}
+
+.save-btn.dirty:hover {
+  background: var(--secondary);
+}
+
+.last-saved-time {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+}
+
+.tab-nav {
+  display: flex;
+  gap: 10px;
+  background: var(--bg-card);
+  padding: 5px;
+  border-radius: 8px;
+}
+
+.tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.tab-btn.active {
+  background: var(--primary);
+  color: white;
+}
+
+.header-controls {
+  display: flex;
+  gap: 10px;
+}
+
+input[type="date"],
+input[type="number"],
+input[type="time"],
+textarea {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-main);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-family: inherit;
+}
+
+.print-btn {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* Weather */
+.weather-section {
+  margin-bottom: 30px;
+}
+
+.weather-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.weather-card {
+  background: var(--bg-card);
+  padding: 10px;
+  border-radius: 10px;
+  text-align: center;
+  border: 1px solid var(--border);
+}
+
+.weather-card.today {
+  border: 2px solid var(--secondary);
+  background: #3a3a3a;
+}
+
+.weather-label {
+  font-weight: 700;
+  color: var(--secondary);
+}
+
+.weather-date {
+  font-size: 0.8em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.weather-select {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+}
+
+.weather-icon-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.weather-icon-btn.active {
+  background: var(--border);
+  transform: scale(1.2);
+}
+
+/* Table */
+.group-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.section h2 {
+  color: var(--secondary);
+  border-left: 5px solid var(--primary);
+  padding-left: 10px;
+  margin-bottom: 15px;
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+.bread-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-card);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.bread-table th,
+.bread-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.bread-table th {
+  background: var(--primary);
+  color: white;
+  font-weight: 600;
+}
+
+.name-cell {
+  min-width: 140px;
+}
+
+.bread-name {
+  font-weight: 500;
+}
+
+.bread-note {
+  font-size: 0.75em;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.bread-table input[type="number"] {
+  width: 60px;
+  text-align: center;
+}
+
+.toggle-btn {
+  background: #444;
+  border: none;
+  font-size: 1.2rem;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.toggle-btn.active {
+  background: var(--success);
+}
+
+.disabled-row {
+  opacity: 0.5;
+  background: #222;
+}
+
+/* Memo */
+.memo-section {
+  margin-top: 40px;
+  background: var(--bg-card);
+  padding: 20px;
+  border-radius: 8px;
+}
+
+textarea {
+  width: 100%;
+  height: 120px;
+  margin-top: 10px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+/* Sold out time (Locked) */
+.locked-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.lock-icon {
+  position: absolute;
+  right: 5px;
+  font-size: 0.8em;
+  opacity: 0.5;
+}
+
+/* Demo */
+.demo-section {
+  display: flex;
+  justify-content: center;
+  padding: 100px 0;
+}
+
+.demo-card {
+  background: var(--bg-card);
+  padding: 40px;
+  border-radius: 12px;
+  text-align: center;
+  max-width: 500px;
+  border: 1px solid var(--border);
+}
+
+.demo-card h2 {
+  color: var(--secondary);
+  margin-bottom: 20px;
+}
+
+.demo-card p {
+  margin-bottom: 10px;
+  color: var(--text-muted);
+}
+
+.warning-text {
+  font-size: 0.85em;
+  color: var(--error) !important;
+  margin-bottom: 30px !important;
+}
+
+.generate-btn {
+  background: var(--success);
+  color: white;
+  border: none;
+  padding: 15px 30px;
+  border-radius: 8px;
+  font-size: 1.1em;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s;
+  display: block;
+  margin: 0 auto;
+}
+
+.generate-btn:hover {
+  transform: scale(1.05);
+}
+
+.clear-demo-btn {
+  background: transparent;
+  color: var(--error);
+  border: 1px solid var(--error);
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 0.9em;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 15px;
+  transition: all 0.2s;
+}
+
+.clear-demo-btn:hover {
+  background: var(--error);
+  color: white;
+}
+
+/* Utility */
+.center {
+  text-align: center !important;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .app-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .header-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .weather-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .bread-table th,
+  .bread-table td {
+    padding: 8px;
+    font-size: 0.9em;
+  }
+}
+
+/* Sparkline SVG */
+.sparkline-svg {
+  overflow: visible;
+  display: block;
+}
+
+.spark-axis {
+  stroke: rgba(255, 255, 255, 0.15);
+  stroke-width: 0.5;
+}
+
+.spark-line {
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.spark-line.prod {
+  stroke: var(--secondary);
+}
+
+.spark-line.disp {
+  stroke: #e74c3c;
+}
+
+.spark-line.rem {
+  stroke: #3498db;
+}
+
+.spark-label-max,
+.spark-label-zero {
+  font-size: 5px;
+  fill: rgba(255, 255, 255, 0.4);
+  text-anchor: end;
+  dominant-baseline: middle;
+}
+
+.spark-legend-text {
+  font-size: 5.5px;
+  fill: rgba(255, 255, 255, 0.5);
+  dominant-baseline: middle;
+}
+
+.spark-legend-prod {
+  fill: var(--secondary);
+}
+
+.spark-legend-disp {
+  fill: #e74c3c;
+}
+
+.spark-legend-rem {
+  fill: #3498db;
+}
+
+.sparkline-empty {
+  font-size: 0.8em;
+  color: var(--text-muted);
+}
+
+
+/* Print */
+.only-print {
+  display: none;
+}
+
+@media print {
+  .no-print {
+    display: none;
+  }
+
+  .only-print {
+    display: block;
+  }
+
+  body {
+    background: white;
+    color: black;
+  }
+
+  .app-container {
+    max-width: 100%;
+    padding: 0;
+  }
+
+  .bread-table {
+    border: 1px solid black;
+  }
+
+  .bread-table th {
+    background: #eee !important;
+    color: black;
+    border: 1px solid black;
+  }
+
+  .bread-table td {
+    border: 1px solid black;
+  }
+
+  .bread-table input,
+  .bread-table button {
+    border: none;
+    background: none;
+    color: black;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  .weather-grid {
+    grid-template-columns: repeat(6, 1fr);
+    border: 1px solid black;
+  }
+
+  .weather-card {
+    border: none;
+    border-right: 1px solid black;
+    border-radius: 0;
+  }
+
+  .weather-select {
+    display: none;
+  }
+
+  .weather-card::after {
+    content: attr(data-weather);
+    font-weight: bold;
+  }
+
+  .section h2 {
+    color: black;
+    border-left: 3px solid black;
+  }
+}
