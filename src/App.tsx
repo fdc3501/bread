@@ -152,7 +152,7 @@ const App: React.FC = () => {
     <div className="app-container">
       <header className="app-header no-print">
         <div className="header-left">
-          <h1>🍞 빵 생산 지시서</h1>
+          <h1>🍞 빵 생산 지시서 (v2.2)</h1>
           <nav className="tab-nav">
             <button
               className={`tab-btn ${activeTab === 'edit' ? 'active' : ''}`}
@@ -285,7 +285,7 @@ const App: React.FC = () => {
           <div className="settings-section">
             <div className="settings-card">
               <div className="settings-item">
-                <h3>⚙️ 앱 설정 (v2.1)</h3>
+                <h3>⚙️ 앱 설정 (v2.2)</h3>
                 <p className="description">🔗 구글 시트 연동 (동기화)</p>
                 <div className="sync-input-group">
                   <input
@@ -315,7 +315,7 @@ const App: React.FC = () => {
             </div>
           </div>
         )}
-      </main >
+      </main>
 
       <footer className="footer no-print">
         <p>© 2026 Bread Production App. All records are saved locally.</p>
