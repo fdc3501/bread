@@ -22,7 +22,7 @@ const App: React.FC = () => {
   const {
     sheet, savedAt, isDirty, isSyncing, syncMessage,
     saveSheet, updateWeather, updateBreadRecord, updateMemo, loadDate,
-    getAllHistory, generateDummyData, clearDemoData
+    getAllHistory, generateDummyData, clearDemoData, testSync
   } = useSheet(currentDate, syncUrl);
 
   const allHistory = useMemo(() => getAllHistory(), [sheet]);
@@ -288,16 +288,23 @@ const App: React.FC = () => {
                 <h3>⚙️ 앱 설정 (v2.2)</h3>
                 <p className="description">🔗 구글 시트 연동 (동기화)</p>
                 <div className="sync-input-group">
-                  <input
-                    type="text"
-                    value={syncUrl}
-                    onChange={(e) => setSyncUrl(e.target.value)}
-                    placeholder="https://script.google.com/macros/s/.../exec"
                   />
+                  <button
+                    className="save-btn"
+                    style={{ marginLeft: '10px', height: '100%', padding: '10px 15px' }}
+                    onClick={() => testSync()}
+                    disabled={!syncUrl}
+                  >
+                    🔗 연결 테스트
+                  </button>
                 </div>
-                {syncUrl && (
+                {syncUrl ? (
                   <div className="sync-status-info">
-                    ✅ 주소가 설정되었습니다. [저장하기] 버튼 클릭 시 구글 시트에도 함께 저장됩니다.
+                    ✅ 주소가 입력되었습니다. (v2.2 확인됨)
+                  </div>
+                ) : (
+                  <div className="sync-status-info" style={{ color: '#e74c3c' }}>
+                    ⚠️ 주소가 입력되지 않았습니다. 위 칸에 구글 시트 주소를 넣어주세요.
                   </div>
                 )}
               </div>

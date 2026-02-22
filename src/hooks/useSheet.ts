@@ -284,6 +284,26 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
         loadDate(sheet.date);
     };
 
+    const testSync = async () => {
+        if (!syncUrl) return alert('먼저 주소를 입력해 주세요.');
+        setIsSyncing(true);
+        setSyncMessage('연결 테스트 중...');
+        try {
+            // GAS GET always returns something if alive
+            const response = await fetch(`${syncUrl.trim()}?test=1`);
+            if (response.ok) {
+                alert('연결 성공! 구글 시트와 통신이 가능합니다.');
+            } else {
+                alert(`연결 실패 (코드: ${response.status})`);
+            }
+        } catch (e) {
+            alert('연결 실패: 주소가 잘못되었거나 네트워크가 차단되었습니다.');
+        } finally {
+            setIsSyncing(false);
+            setSyncMessage(null);
+        }
+    };
+
     return {
         sheet,
         savedAt,
@@ -297,6 +317,7 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
         loadDate,
         getAllHistory,
         generateDummyData,
-        clearDemoData
+        clearDemoData,
+        testSync
     };
 };
