@@ -20,6 +20,9 @@ const AnalysisDashboard: React.FC<Props> = ({ history }) => {
         return todaySheet.weather.map(wRec => {
             const historicalEntry = history.find(h => h.date === wRec.date);
 
+            // For historical points (D-2, D-1, today), try to get the recorded weather from that day's sheet
+            const recordedWeather = historicalEntry?.weather.find(w => w.date === wRec.date);
+
             // LOGIC SHIFT: The actual production for 'date' is what was planned on 'date - 1'
             const yesterdayDate = new Date(wRec.date);
             yesterdayDate.setDate(yesterdayDate.getDate() - 1);
@@ -38,7 +41,9 @@ const AnalysisDashboard: React.FC<Props> = ({ history }) => {
                 rem: historicalEntry ? (Number(historicalEntry.breads[breadId]?.remain) || 0) : 0,
                 date: wRec.date,
                 label: labelMap[wRec.label] || wRec.label,
-                weather: wRec.weather || undefined,
+                weather: recordedWeather?.weather || wRec.weather || undefined,
+                temp: recordedWeather?.temp || wRec.temp,
+                wind: recordedWeather?.wind || wRec.wind,
             };
         });
     };

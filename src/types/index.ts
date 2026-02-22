@@ -23,6 +23,8 @@ export interface WeatherRecord {
   date: string; // YYYY-MM-DD
   label: string; // 전전날, 전날, 당일, 다음날, 다다음날, 다다다음날
   weather: Weather | null;
+  temp?: number;
+  wind?: number;
 }
 
 export interface DailySheet {

@@ -379,20 +379,27 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
             const startDate = sheet.weather[0].date;
             const endDate = sheet.weather[5].date;
 
-            // Use weather_code (modern) and explicit SEOUL timezone
-            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=weather_code&timezone=Asia%2FSeoul&start_date=${startDate}&end_date=${endDate}`;
+            // Use weather_code, temperature_2m_max, and wind_speed_10m_max
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=weather_code,temperature_2m_max,wind_speed_10m_max&timezone=Asia%2FSeoul&start_date=${startDate}&end_date=${endDate}`;
             const response = await fetch(url);
 
             if (response.ok) {
                 const data = await response.json();
-                if (data.daily && data.daily.time && data.daily.weather_code) {
+                if (data.daily && data.daily.time) {
                     const apiDates = data.daily.time as string[];
                     const apiCodes = data.daily.weather_code as number[];
+                    const apiTemps = data.daily.temperature_2m_max as number[];
+                    const apiWinds = data.daily.wind_speed_10m_max as number[];
 
                     const newWeather = sheet.weather.map(w => {
                         const idx = apiDates.indexOf(w.date);
                         if (idx !== -1) {
-                            return { ...w, weather: mapWMOCodeToWeather(apiCodes[idx]) };
+                            return {
+                                ...w,
+                                weather: mapWMOCodeToWeather(apiCodes[idx]),
+                                temp: apiTemps[idx],
+                                wind: apiWinds[idx]
+                            };
                         }
                         return w;
                     });

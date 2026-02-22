@@ -8,14 +8,17 @@ export interface SparkDataPoint {
     date?: string;       // 'YYYY-MM-DD'
     label?: string;      // '전전날', '전날', '당일' etc.
     weather?: Weather;
+    temp?: number;
+    wind?: number;
 }
 
-const WEATHER_ICONS: Partial<Record<Weather, string>> = {
+const WEATHER_ICONS: Record<string, string> = {
     sunny: '☀️',
     cloudy: '☁️',
     rainy: '🌧️',
     snowy: '❄️',
     'partly-cloudy': '⛅',
+    unknown: '❓'
 };
 
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -33,7 +36,7 @@ export const Sparkline: React.FC<Props> = ({
     width = 90,
     height = 36,
 }) => {
-    const BOTTOM_PAD = showXLabels ? 55 : 10;
+    const BOTTOM_PAD = showXLabels ? 65 : 10;
     const PAD = { top: 6, right: 6, bottom: BOTTOM_PAD, left: 24 };
     const W = width;
     const H = height;
@@ -74,31 +77,32 @@ export const Sparkline: React.FC<Props> = ({
             {/* X-axis */}
             <line x1={PAD.left} y1={PAD.top + innerH} x2={W - PAD.right} y2={PAD.top + innerH} className="spark-axis" />
 
-            {/* X labels: day + weather */}
+            {/* X labels: day + weather + details */}
             {showXLabels && data.map((d, i) => {
                 const x = PAD.left + i * xStep;
                 const isWeekend = d.date ? [0, 6].includes(new Date(d.date + 'T00:00:00').getDay()) : false;
                 const dayLabel = d.label || (d.date ? DAY_LABELS[new Date(d.date + 'T00:00:00').getDay()] : `D${i + 1}`);
-                const weatherIcon = d.weather ? (WEATHER_ICONS[d.weather] ?? '') : '';
+                const weatherIcon = d.weather ? (WEATHER_ICONS[d.weather] ?? '') : (d.date ? '❓' : '');
+
                 return (
                     <g key={i}>
                         <text x={x} y={PAD.top + innerH + 12} className="spark-xlabel" textAnchor="middle"
-                            fill={isWeekend ? '#f39c12' : 'rgba(255,255,255,0.7)'}>
+                            fill={isWeekend ? '#f39c12' : 'rgba(255,255,255,0.7)'} style={{ fontWeight: 600 }}>
                             {dayLabel}
                         </text>
-                        <foreignObject x={x - 12} y={PAD.top + innerH + 18} width={24} height={24}>
-                            <div style={{
-                                display: 'flex',
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                                fontSize: '18px',
-                                width: '100%',
-                                height: '100%',
-                                pointerEvents: 'none'
-                            }}>
-                                {weatherIcon || (d.date ? '❓' : '')}
-                            </div>
-                        </foreignObject>
+                        <text x={x} y={PAD.top + innerH + 28} textAnchor="middle" style={{ fontSize: '14px' }}>
+                            {weatherIcon}
+                        </text>
+                        {d.temp !== undefined && (
+                            <text x={x} y={PAD.top + innerH + 40} textAnchor="middle" fill="var(--primary)" style={{ fontSize: '7px', fontWeight: 600 }}>
+                                {Math.round(d.temp)}°C
+                            </text>
+                        )}
+                        {d.wind !== undefined && (
+                            <text x={x} y={PAD.top + innerH + 48} textAnchor="middle" fill="var(--text-muted)" style={{ fontSize: '6px' }}>
+                                {d.wind.toFixed(1)}m/s
+                            </text>
+                        )}
                     </g>
                 );
             })}
