@@ -295,37 +295,39 @@ const App: React.FC = () => {
                     placeholder="https://script.google.com/macros/s/.../exec"
                   />
                 </div>
-              </div>
+                {syncUrl && (
+                  <div className="sync-status-info">
+                    ✅ 주소가 설정되었습니다. [저장하기] 버튼 클릭 시 구글 시트에도 함께 저장됩니다.
+                  </div>
                 )}
-            </div>
+              </div>
 
-            <section className="settings-item help">
-              <h3>❓ 설정 방법 도움말</h3>
-              <ol>
-                <li>구글 시트를 새로 하나 만듭니다.</li>
-                <li><strong>[확장 프로그램] &gt; [Apps Script]</strong>를 클릭합니다.</li>
-                <li>파일에 제공된 <code>google_sheets_bridge.js</code> 코드를 붙여넣습니다.</li>
-                <li><strong>[배포] &gt; [새 배포]</strong> (유형: 웹 앱, 액세스 권한: 모든 사용자)를 실행합니다.</li>
-                <li>완료 후 나오는 <strong>웹 앱 URL</strong>을 위 칸에 붙여넣으면 끝!</li>
-              </ol>
-            </section>
+              <section className="settings-item help">
+                <h3>❓ 설정 방법 도움말</h3>
+                <ol>
+                  <li>구글 시트를 새로 하나 만듭니다.</li>
+                  <li><strong>[확장 프로그램] &gt; [Apps Script]</strong>를 클릭합니다.</li>
+                  <li>파일에 제공된 <code>google_sheets_bridge.js</code> 코드를 붙여넣습니다.</li>
+                  <li><strong>[배포] &gt; [새 배포]</strong> (유형: 웹 앱, 액세스 권한: 모든 사용자)를 실행합니다.</li>
+                  <li>완료 후 나오는 <strong>웹 앱 URL</strong>을 위 칸에 붙여넣으면 끝!</li>
+                </ol>
+              </section>
+            </div>
           </div>
-          </div>
-  )
-}
+        )}
       </main >
 
-  <footer className="footer no-print">
-    <p>© 2026 Bread Production App. All records are saved locally.</p>
-  </footer>
+      <footer className="footer no-print">
+        <p>© 2026 Bread Production App. All records are saved locally.</p>
+      </footer>
 
-{/* Print-only layout header */ }
-<div className="print-header only-print">
-  <h1>생산 지시서 ({currentDate})</h1>
-  <div className="print-weather">
-    날씨: {sheet.weather.find(w => w.label === '당일')?.weather ? WEATHER_ICONS[sheet.weather.find(w => w.label === '당일')!.weather!] : '미기록'}
-  </div>
-</div>
+      {/* Print-only layout header */}
+      <div className="print-header only-print">
+        <h1>생산 지시서 ({currentDate})</h1>
+        <div className="print-weather">
+          날씨: {sheet.weather.find(w => w.label === '당일')?.weather ? WEATHER_ICONS[sheet.weather.find(w => w.label === '당일')!.weather!] : '미기록'}
+        </div>
+      </div>
     </div >
   );
 };
