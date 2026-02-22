@@ -1,8 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useSheet } from './hooks/useSheet';
 import { BREAD_LIST } from './data/breads';
 import type { Weather } from './types';
-import AnalysisDashboard from './components/AnalysisDashboard';
+import { AnalysisDashboard } from './components/AnalysisDashboard';
 import { Sparkline } from './components/Sparkline';
 import './App.css';
 
@@ -16,11 +16,21 @@ const WEATHER_ICONS: Record<Weather, string> = {
 
 const App: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0]);
-  const [activeTab, setActiveTab] = useState<'edit' | 'analyze' | 'demo'>('edit');
-  const { sheet, savedAt, isDirty, saveSheet, updateWeather, updateBreadRecord, updateMemo, loadDate, getAllHistory, generateDummyData, clearDemoData } = useSheet(currentDate);
+  const [activeTab, setActiveTab] = useState<'edit' | 'analyze' | 'demo' | 'settings'>('edit');
+  const [syncUrl, setSyncUrl] = useState(() => localStorage.getItem('google_sheets_url') || '');
+
+  const {
+    sheet, savedAt, isDirty, isSyncing, syncMessage,
+    saveSheet, updateWeather, updateBreadRecord, updateMemo, loadDate,
+    getAllHistory, generateDummyData, clearDemoData
+  } = useSheet(currentDate, syncUrl);
 
   const allHistory = useMemo(() => getAllHistory(), [sheet]);
   const history = useMemo(() => activeTab === 'analyze' ? allHistory : [], [activeTab, allHistory]);
+
+  useEffect(() => {
+    localStorage.setItem('google_sheets_url', syncUrl);
+  }, [syncUrl]);
 
   const getSparklineData = (breadId: string) => {
     const last7Days = [];
@@ -50,7 +60,7 @@ const App: React.FC = () => {
     loadDate(newDate);
   };
 
-  const handleTabChange = (tab: 'edit' | 'analyze' | 'demo') => {
+  const handleTabChange = (tab: 'edit' | 'analyze' | 'demo' | 'settings') => {
     if (isDirty && !confirm('저장하지 않은 변경사항이 있습니다. 계속하시겠습니까?')) return;
     setActiveTab(tab);
   };
@@ -160,12 +170,21 @@ const App: React.FC = () => {
               className={`tab-btn ${activeTab === 'demo' ? 'active' : ''}`}
               onClick={() => handleTabChange('demo')}
             >
-              🧪 데모 (데이터 생성)
+              🧪 데모
+            </button>
+            <button
+              className={`tab-btn ${activeTab === 'settings' ? 'active' : ''}`}
+              onClick={() => handleTabChange('settings')}
+            >
+              ⚙️ 설정
             </button>
           </nav>
         </div>
         <div className="header-controls">
           <input type="date" value={currentDate} onChange={handleDateChange} />
+
+          {isSyncing && <div className="sync-spinner" title="동기화 중...">🔄</div>}
+          {syncMessage && <span className="sync-msg">{syncMessage}</span>}
 
           <button
             className={`save-btn ${isDirty ? 'dirty' : ''}`}
@@ -239,7 +258,7 @@ const App: React.FC = () => {
           </>
         ) : activeTab === 'analyze' ? (
           <AnalysisDashboard history={history} />
-        ) : (
+        ) : activeTab === 'demo' ? (
           <div className="demo-section">
             <div className="demo-card">
               <h2>🧪 시뮬레이션 데모</h2>
@@ -260,6 +279,40 @@ const App: React.FC = () => {
               }}>
                 데모 데이터만 삭제하기
               </button>
+            </div>
+          </div>
+        ) : (
+          <div className="settings-section">
+            <div className="settings-card">
+              <h2>⚙️ 앱 설정</h2>
+              <section className="settings-item">
+                <h3>🔗 구글 시트 연동 (동기화)</h3>
+                <p>PC와 태블릿 간에 데이터를 공유하려면 구글 앱스 스크립트 URL을 입력하세요.</p>
+                <div className="sync-input-group">
+                  <input
+                    type="text"
+                    value={syncUrl}
+                    onChange={(e) => setSyncUrl(e.target.value)}
+                    placeholder="https://script.google.com/macros/s/.../exec"
+                  />
+                </div>
+                {syncUrl && (
+                  <div className="sync-status-info">
+                    ✅ 주소가 설정되었습니다. [저장하기] 버튼 클릭 시 구글 시트에도 함께 저장됩니다.
+                  </div>
+                )}
+              </section>
+
+              <section className="settings-item help">
+                <h3>❓ 설정 방법 도움말</h3>
+                <ol>
+                  <li>구글 시트를 새로 하나 만듭니다.</li>
+                  <li><strong>[확장 프로그램] &gt; [Apps Script]</strong>를 클릭합니다.</li>
+                  <li>파일에 제공된 <code>google_sheets_bridge.js</code> 코드를 붙여넣습니다.</li>
+                  <li><strong>[배포] &gt; [새 배포]</strong> (유형: 웹 앱, 액세스 권한: 모든 사용자)를 실행합니다.</li>
+                  <li>완료 후 나오는 <strong>웹 앱 URL</strong>을 위 칸에 붙여넣으면 끝!</li>
+                </ol>
+              </section>
             </div>
           </div>
         )}

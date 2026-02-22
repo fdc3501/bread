@@ -34,7 +34,10 @@ const getEmptyBreads = (): Record<string, BreadRecord> => {
     return records;
 };
 
-export const useSheet = (initialDate: string) => {
+export const useSheet = (initialDate: string, syncUrl?: string) => {
+    const [isSyncing, setIsSyncing] = useState(false);
+    const [syncMessage, setSyncMessage] = useState<string | null>(null);
+
     const [sheet, setSheet] = useState<DailySheet>(() => {
         const saved = localStorage.getItem(`${STORAGE_KEY}_${initialDate}`);
         if (saved) return JSON.parse(saved);
@@ -53,10 +56,29 @@ export const useSheet = (initialDate: string) => {
     });
     const [isDirty, setIsDirty] = useState(false);
 
-    const saveSheet = () => {
+    const saveSheet = async () => {
         localStorage.setItem(`${STORAGE_KEY}_${sheet.date}`, JSON.stringify(sheet));
         setSavedAt(new Date());
         setIsDirty(false);
+
+        if (syncUrl) {
+            setIsSyncing(true);
+            try {
+                const response = await fetch(syncUrl, {
+                    method: 'POST',
+                    body: JSON.stringify(sheet)
+                });
+                if (response.ok) {
+                    setSyncMessage('구글 시트 동기화 완료');
+                    setTimeout(() => setSyncMessage(null), 3000);
+                }
+            } catch (e) {
+                console.error('Sync failed', e);
+                setSyncMessage('동기화 실패');
+            } finally {
+                setIsSyncing(false);
+            }
+        }
     };
 
     const updateWeather = (index: number, weather: Weather) => {
@@ -82,10 +104,35 @@ export const useSheet = (initialDate: string) => {
         setIsDirty(true);
     };
 
-    const loadDate = (date: string) => {
-        const saved = localStorage.getItem(`${STORAGE_KEY}_${date}`);
-        if (saved) {
-            setSheet(JSON.parse(saved));
+    const loadDate = async (date: string) => {
+        const localSaved = localStorage.getItem(`${STORAGE_KEY}_${date}`);
+        let currentSheet: DailySheet | null = localSaved ? JSON.parse(localSaved) : null;
+
+        if (syncUrl) {
+            setIsSyncing(true);
+            try {
+                const response = await fetch(`${syncUrl}?date=${date}`);
+                if (response.ok) {
+                    const remoteData = await response.json();
+                    if (remoteData && remoteData.date === date) {
+                        // Merge or overwrite if remote is newer? For now, if we have local, we keep it, 
+                        // but if we don't, we take remote. Or always take remote as truth.
+                        // Let's take remote as truth if it exists.
+                        currentSheet = remoteData;
+                        localStorage.setItem(`${STORAGE_KEY}_${date}`, JSON.stringify(remoteData));
+                    }
+                }
+            } catch (e) {
+                console.error('Remote fetch failed', e);
+            } finally {
+                setIsSyncing(false);
+            }
+        }
+
+        if (currentSheet) {
+            setSheet(currentSheet);
+            setSavedAt(new Date());
+            setIsDirty(false);
         } else {
             // Auto-prefill from yesterday's data
             const yesterday = new Date(date);
@@ -126,6 +173,8 @@ export const useSheet = (initialDate: string) => {
                 breads: prefillBreads,
                 memo: ''
             });
+            setSavedAt(null);
+            setIsDirty(false);
         }
     };
 
@@ -226,6 +275,8 @@ export const useSheet = (initialDate: string) => {
         sheet,
         savedAt,
         isDirty,
+        isSyncing,
+        syncMessage,
         saveSheet,
         updateWeather,
         updateBreadRecord,

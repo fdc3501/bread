@@ -70,6 +70,89 @@ body {
   white-space: nowrap;
 }
 
+.sync-spinner {
+  font-size: 1.2rem;
+  animation: rotate 2s linear infinite;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.sync-msg {
+  font-size: 0.75rem;
+  color: var(--success);
+  margin-right: 8px;
+}
+
+/* Settings Tab */
+.settings-section {
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.settings-card {
+  background: var(--bg-card);
+  padding: 30px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.settings-item {
+  margin-bottom: 30px;
+}
+
+.settings-item h3 {
+  margin-bottom: 15px;
+  color: var(--primary);
+}
+
+.sync-input-group {
+  margin: 15px 0;
+}
+
+.sync-input-group input {
+  width: 100%;
+  padding: 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.sync-status-info {
+  font-size: 0.85rem;
+  color: var(--success);
+  margin-top: 10px;
+}
+
+.settings-item.help {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.settings-item.help ol {
+  margin-left: 20px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.settings-item.help code {
+  background: #444;
+  padding: 2px 5px;
+  border-radius: 3px;
+  color: #eee;
+}
+
 .header-left {
   display: flex;
   align-items: center;
