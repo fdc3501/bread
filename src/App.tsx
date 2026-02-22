@@ -28,8 +28,13 @@ const App: React.FC = () => {
     refreshWeather
   } = useSheet(currentDate, syncUrl);
 
-  const allHistory = useMemo(() => getAllHistory(), [sheet]);
-  const history = useMemo(() => activeTab === 'analyze' ? allHistory : [], [activeTab, allHistory]);
+  const allHistory = useMemo(() => {
+    const rawHistory = getAllHistory();
+    // Merge current live sheet into history so dashboard sees unsaved changes
+    const filtered = rawHistory.filter(h => h.date !== sheet.date);
+    return [sheet, ...filtered].sort((a, b) => b.date.localeCompare(a.date));
+  }, [sheet]);
+  const history = useMemo(() => activeTab === 'analyze' || activeTab === 'edit' ? allHistory : [], [activeTab, allHistory]);
 
   useEffect(() => {
     localStorage.setItem('google_sheets_url', syncUrl);
