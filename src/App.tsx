@@ -80,8 +80,48 @@ const App: React.FC = () => {
     setActiveTab(tab);
   };
 
+  const copyToKakao = () => {
+    const itemsToProduce = BREAD_LIST.filter(item => sheet.breads[item.id].produce);
+    if (itemsToProduce.length === 0) return alert('생산할 품목이 없습니다.');
+
+    const dateStr = new Date(currentDate).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
+    let text = `🍞 ${dateStr} 생산 지시서\n\n`;
+
+    // Group items by A/B for better readability
+    const groupA = itemsToProduce.filter(i => i.group === 'A');
+    const groupB = itemsToProduce.filter(i => i.group === 'B');
+
+    if (groupA.length > 0) {
+      text += `[기본 빵류]\n`;
+      groupA.forEach(item => {
+        text += `- ${item.name}: ${sheet.breads[item.id].produceQty}개\n`;
+      });
+      text += '\n';
+    }
+
+    if (groupB.length > 0) {
+      text += `[기타/고로케]\n`;
+      groupB.forEach(item => {
+        text += `- ${item.name}: ${sheet.breads[item.id].produceQty}개\n`;
+      });
+      text += '\n';
+    }
+
+    if (sheet.memo) {
+      text += `📝 메모: ${sheet.memo}\n`;
+    }
+
+    navigator.clipboard.writeText(text).then(() => {
+      alert('카톡용 텍스트가 복사되었습니다. 카카오톡에 붙여넣기 하세요!');
+    }).catch(err => {
+      console.error('Copy failed', err);
+      alert('복사 실패. 브라우저 권한을 확인해 주세요.');
+    });
+  };
+
   const renderTable = (group: 'A' | 'B') => {
     const items = BREAD_LIST.filter(item => item.group === group);
+    const hours = Array.from({ length: 16 }, (_, i) => i + 7); // 07:00 ~ 22:00
 
     return (
       <div className="table-container">
@@ -113,7 +153,7 @@ const App: React.FC = () => {
                       type="number"
                       value={record.remain}
                       onChange={(e) => updateBreadRecord(item.id, { remain: e.target.value })}
-                      placeholder="-"
+                      placeholder="0"
                     />
                   </td>
                   <td>
@@ -121,6 +161,7 @@ const App: React.FC = () => {
                       type="number"
                       value={record.disposal}
                       onChange={(e) => updateBreadRecord(item.id, { disposal: e.target.value })}
+                      placeholder="0"
                     />
                   </td>
                   <td className="no-print center">
@@ -147,12 +188,18 @@ const App: React.FC = () => {
                     )}
                   </td>
                   <td className="sold-out-cell">
-                    <input
-                      type="time"
+                    <select
                       value={record.soldOutTime || ''}
                       onChange={(e) => updateBreadRecord(item.id, { soldOutTime: e.target.value })}
-                      placeholder="--:--"
-                    />
+                      className="hour-select"
+                    >
+                      <option value="">-</option>
+                      {hours.map(h => (
+                        <option key={h} value={`${String(h).padStart(2, '0')}:00`}>
+                          {h}시
+                        </option>
+                      ))}
+                    </select>
                   </td>
                 </tr>
               );
@@ -218,6 +265,10 @@ const App: React.FC = () => {
               마지막 저장: {savedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
           )}
+
+          <button className="copy-btn" onClick={copyToKakao} title="생산 목록을 텍스트로 복사하여 카톡으로 보내세요">
+            📋 카톡용 복사
+          </button>
 
           {sheet.status !== 'finalized' ? (
             <button className="finalize-btn" onClick={finalizeSheet}>🔓 최종 확정하기</button>

@@ -109,11 +109,16 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
     };
 
     const updateBreadRecord = (breadId: string, updates: Partial<BreadRecord>) => {
+        // Automatically treat empty strings for remain and disposal as 0 when updating
+        const processedUpdates = { ...updates };
+        if (processedUpdates.remain === '') processedUpdates.remain = '0';
+        if (processedUpdates.disposal === '') processedUpdates.disposal = 0;
+
         setSheet({
             ...sheet,
             breads: {
                 ...sheet.breads,
-                [breadId]: { ...sheet.breads[breadId], ...updates }
+                [breadId]: { ...sheet.breads[breadId], ...processedUpdates }
             }
         });
         setIsDirty(true);
@@ -164,6 +169,14 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
             setSheet(currentSheet);
             setSavedAt(new Date());
             setIsDirty(false);
+
+            // AUTO-UPDATE WEATHER: if today's weather is missing
+            const todayWeather = currentSheet.weather.find(w => w.label === '당일')?.weather;
+            if (!todayWeather) {
+                const lat = Number(localStorage.getItem('latitude')) || 37.526;
+                const lng = Number(localStorage.getItem('longitude')) || 126.674;
+                refreshWeather(lat, lng);
+            }
         } else {
             // Auto-prefill from yesterday's data
             const yesterday = new Date(date);
@@ -198,15 +211,22 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
                 });
             }
 
-            setSheet({
+            const newSheet: DailySheet = {
                 date,
                 weather: getInitialWeather(new Date(date)),
                 breads: prefillBreads,
                 memo: '',
                 status: 'draft'
-            });
+            };
+            setSheet(newSheet);
             setSavedAt(null);
             setIsDirty(false);
+
+            // AUTO-UPDATE WEATHER for new sheet
+            const lat = Number(localStorage.getItem('latitude')) || 37.526;
+            const lng = Number(localStorage.getItem('longitude')) || 126.674;
+            // Delay slightly to ensure state is settled
+            setTimeout(() => refreshWeather(lat, lng), 500);
         }
     };
 
