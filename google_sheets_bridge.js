@@ -1,5 +1,5 @@
 function doPost(e) {
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0]; // 첫 번째 시트를 명시적으로 사용
     var data = JSON.parse(e.postData.contents);
     var date = data.date; // "YYYY-MM-DD"
 
@@ -9,9 +9,10 @@ function doPost(e) {
 
     var values = sheet.getDataRange().getValues();
     var rowToUpdate = -1;
+    var targetNumeric = date.replace(/[^0-9]/g, ""); // "20260222"
 
     for (var i = 1; i < values.length; i++) {
-        if (matchDate(values[i][0], date)) {
+        if (getNumericDate(values[i][0]) === targetNumeric) {
             rowToUpdate = i + 1;
             break;
         }
@@ -27,8 +28,9 @@ function doPost(e) {
 }
 
 function doGet(e) {
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
     var date = e.parameter.date;
+    var targetNumeric = date.replace(/[^0-9]/g, "");
 
     if (sheet.getLastRow() === 0) {
         return ContentService.createTextOutput(JSON.stringify({ result: "not_found" })).setMimeType(ContentService.MimeType.JSON);
@@ -36,7 +38,7 @@ function doGet(e) {
 
     var values = sheet.getDataRange().getValues();
     for (var i = 1; i < values.length; i++) {
-        if (matchDate(values[i][0], date)) {
+        if (getNumericDate(values[i][0]) === targetNumeric) {
             return ContentService.createTextOutput(values[i][1]).setMimeType(ContentService.MimeType.JSON);
         }
     }
@@ -44,21 +46,15 @@ function doGet(e) {
     return ContentService.createTextOutput(JSON.stringify({ result: "not_found" })).setMimeType(ContentService.MimeType.JSON);
 }
 
-// 찰떡같이 날짜를 찾아내는 함수
-function matchDate(cellValue, targetDateStr) {
-    if (!cellValue) return false;
+// 어떤 형식이든 숫자만 추출 (2026-02-22 -> 20260222, 2026. 2. 22 -> 20260222)
+function getNumericDate(cellValue) {
+    if (!cellValue) return "";
 
-    // 1. 단순 문자열 비교
-    var cellStr = String(cellValue);
-    if (cellStr.indexOf(targetDateStr) !== -1) return true;
-
-    // 2. 날짜 객체인 경우 (한국 시간 GMT+9 기준으로 변환해서 비교)
     if (cellValue instanceof Date) {
-        try {
-            var formatted = Utilities.formatDate(cellValue, "GMT+9", "yyyy-MM-dd");
-            if (formatted === targetDateStr) return true;
-        } catch (e) { }
+        // 날짜 객체면 안전하게 포맷팅 후 숫자만 추출
+        return Utilities.formatDate(cellValue, "GMT+9", "yyyyMMdd");
     }
 
-    return false;
+    // 문자열이면 모든 기호 제거하고 숫자만
+    return String(cellValue).replace(/[^0-9]/g, "");
 }

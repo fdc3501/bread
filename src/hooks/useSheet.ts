@@ -124,7 +124,8 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
             setIsSyncing(true);
             setSyncMessage('데이터 동기화 중...');
             try {
-                const response = await fetch(`${trimmedUrl}?date=${date}`);
+                // Add timestamp as cache buster
+                const response = await fetch(`${trimmedUrl}?date=${date}&t=${Date.now()}`);
                 if (response.ok) {
                     const remoteData = await response.json();
                     if (remoteData && remoteData.date === date) {
