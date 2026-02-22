@@ -366,8 +366,10 @@ textarea {
 }
 
 .weather-icon-btn.active {
-  background: var(--border);
-  transform: scale(1.2);
+  background: var(--primary);
+  color: white;
+  transform: scale(1.3);
+  box-shadow: 0 0 10px rgba(188, 108, 37, 0.5);
 }
 
 /* Table */

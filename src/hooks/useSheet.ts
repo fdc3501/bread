@@ -359,8 +359,8 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
             const startDate = sheet.weather[0].date;
             const endDate = sheet.weather[5].date;
 
-            // Use weather_code (modern) and timezone=auto
-            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=weather_code&timezone=auto&start_date=${startDate}&end_date=${endDate}`;
+            // Use weather_code (modern) and explicit SEOUL timezone
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=weather_code&timezone=Asia%2FSeoul&start_date=${startDate}&end_date=${endDate}`;
             const response = await fetch(url);
 
             if (response.ok) {
