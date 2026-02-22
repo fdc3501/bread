@@ -52,12 +52,12 @@
 
 /* Extended X-axis labels (day + weather) */
 .spark-xlabel {
-    font-size: 6px;
+    font-size: 9px;
     font-family: inherit;
 }
 
 .spark-xlabel-weather {
-    font-size: 7px;
+    font-size: 11px;
 }
 
 .demo-warning-banner {

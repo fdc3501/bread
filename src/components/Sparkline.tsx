@@ -6,14 +6,15 @@ export interface SparkDataPoint {
     disp: number;
     rem: number;
     date?: string;       // 'YYYY-MM-DD'
+    label?: string;      // '전전날', '전날', '당일' etc.
     weather?: Weather;
 }
 
 const WEATHER_ICONS: Partial<Record<Weather, string>> = {
-    sunny: '☀',
-    cloudy: '☁',
-    rainy: '🌧',
-    snowy: '❄',
+    sunny: '☀️',
+    cloudy: '☁️',
+    rainy: '🌧️',
+    snowy: '❄️',
     'partly-cloudy': '⛅',
 };
 
@@ -32,7 +33,7 @@ export const Sparkline: React.FC<Props> = ({
     width = 90,
     height = 36,
 }) => {
-    const BOTTOM_PAD = showXLabels ? 28 : 10;
+    const BOTTOM_PAD = showXLabels ? 32 : 10;
     const PAD = { top: 6, right: 6, bottom: BOTTOM_PAD, left: 24 };
     const W = width;
     const H = height;
@@ -76,7 +77,7 @@ export const Sparkline: React.FC<Props> = ({
             {showXLabels && data.map((d, i) => {
                 const x = PAD.left + i * xStep;
                 const isWeekend = d.date ? [0, 6].includes(new Date(d.date + 'T00:00:00').getDay()) : false;
-                const dayLabel = d.date ? DAY_LABELS[new Date(d.date + 'T00:00:00').getDay()] : `D${i + 1}`;
+                const dayLabel = d.label || (d.date ? DAY_LABELS[new Date(d.date + 'T00:00:00').getDay()] : `D${i + 1}`);
                 const weatherIcon = d.weather ? (WEATHER_ICONS[d.weather] ?? '') : '';
                 return (
                     <g key={i}>

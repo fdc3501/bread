@@ -11,18 +11,25 @@ interface Props {
 const AnalysisDashboard: React.FC<Props> = ({ history }) => {
     const hasDemoData = useMemo(() => history.some(s => s.isDemo), [history]);
 
-    // Build 7-day sparkline data per bread item (with date + weather)
+    // Build 6-day sparkline data matching the weather window (-2 to +3 days)
     const getSparklineData = (breadId: string) => {
         if (history.length === 0) return [];
         const sorted = [...history].sort((a, b) => a.date.localeCompare(b.date));
-        const last7 = sorted.slice(-7);
-        return last7.map(sheet => ({
-            prod: Number(sheet.breads[breadId]?.produceQty) || 0,
-            disp: Number(sheet.breads[breadId]?.disposal) || 0,
-            rem: Number(sheet.breads[breadId]?.remain) || 0,
-            date: sheet.date,
-            weather: sheet.weather.find(w => w.label === '당일')?.weather || undefined,
-        }));
+        const todaySheet = sorted[sorted.length - 1];
+
+        // The weather array in the latest sheet has 6 elements: 
+        // labels: ['전전날', '전날', '당일', '다음날', '다다음날', '다다다음날']
+        return todaySheet.weather.map(wRec => {
+            const historicalEntry = history.find(h => h.date === wRec.date);
+            return {
+                prod: historicalEntry ? (Number(historicalEntry.breads[breadId]?.produceQty) || 0) : 0,
+                disp: historicalEntry ? (Number(historicalEntry.breads[breadId]?.disposal) || 0) : 0,
+                rem: historicalEntry ? (Number(historicalEntry.breads[breadId]?.remain) || 0) : 0,
+                date: wRec.date,
+                label: wRec.label, // '전전날', '전날' etc.
+                weather: wRec.weather || undefined,
+            };
+        });
     };
 
     const stats = useMemo(() => {
