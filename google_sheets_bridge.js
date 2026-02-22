@@ -1,13 +1,27 @@
 function doPost(e) {
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     var data = JSON.parse(e.postData.contents);
-    var date = data.date;
+    var date = data.date; // "YYYY-MM-DD"
 
-    // Find existing row with same date
+    // Ensure header row exists
+    if (sheet.getLastRow() === 0) {
+        sheet.appendRow(["날짜", "데이터 내용(JSON)"]);
+    }
+
     var values = sheet.getDataRange().getValues();
     var rowToUpdate = -1;
+
     for (var i = 1; i < values.length; i++) {
-        if (values[i][0] == date) {
+        var cellValue = values[i][0];
+        var rowDate = "";
+
+        if (cellValue instanceof Date) {
+            rowDate = Utilities.formatDate(cellValue, Session.getScriptTimeZone(), "yyyy-MM-dd");
+        } else {
+            rowDate = cellValue.toString();
+        }
+
+        if (rowDate == date) {
             rowToUpdate = i + 1;
             break;
         }
@@ -26,9 +40,22 @@ function doGet(e) {
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     var date = e.parameter.date;
 
+    if (sheet.getLastRow() === 0) {
+        return ContentService.createTextOutput(JSON.stringify({ result: "not_found" })).setMimeType(ContentService.MimeType.JSON);
+    }
+
     var values = sheet.getDataRange().getValues();
     for (var i = 1; i < values.length; i++) {
-        if (values[i][0] == date) {
+        var cellValue = values[i][0];
+        var rowDate = "";
+
+        if (cellValue instanceof Date) {
+            rowDate = Utilities.formatDate(cellValue, Session.getScriptTimeZone(), "yyyy-MM-dd");
+        } else {
+            rowDate = cellValue.toString();
+        }
+
+        if (rowDate == date) {
             return ContentService.createTextOutput(values[i][1]).setMimeType(ContentService.MimeType.JSON);
         }
     }
