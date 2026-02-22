@@ -129,8 +129,11 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
                 if (response.ok) {
                     const remoteData = await response.json();
                     if (remoteData && remoteData.date === date) {
-                        currentSheet = remoteData;
-                        localStorage.setItem(`${STORAGE_KEY}_${date}`, JSON.stringify(remoteData));
+                        currentSheet = {
+                            ...remoteData,
+                            status: remoteData.status || 'draft'
+                        };
+                        localStorage.setItem(`${STORAGE_KEY}_${date}`, JSON.stringify(currentSheet));
                         setSavedAt(new Date());
                     }
                 }
@@ -184,7 +187,8 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
                 date,
                 weather: getInitialWeather(new Date(date)),
                 breads: prefillBreads,
-                memo: ''
+                memo: '',
+                status: 'draft'
             });
             setSavedAt(null);
             setIsDirty(false);
@@ -300,6 +304,39 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
         }
     };
 
+    const finalizeSheet = async () => {
+        if (!confirm('현재 생산 계획을 최종 확정하시겠습니까? 확정 후에는 기사님이 확인하게 됩니다.')) return;
+
+        const finalizedSheet: DailySheet = { ...sheet, status: 'finalized' };
+        setSheet(finalizedSheet);
+
+        // Immediate save & sync
+        localStorage.setItem(`${STORAGE_KEY}_${sheet.date}`, JSON.stringify(finalizedSheet));
+        setSavedAt(new Date());
+        setIsDirty(false);
+
+        if (syncUrl) {
+            setIsSyncing(true);
+            setSyncMessage('최종 확정 업로드 중...');
+            try {
+                await fetch(syncUrl.trim(), {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    cache: 'no-cache',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify(finalizedSheet)
+                });
+                setSyncMessage('최종 확정 완료 🔒');
+                setTimeout(() => setSyncMessage(null), 3000);
+            } catch (e) {
+                console.error('Finalize sync failed', e);
+                setSyncMessage('확정 업로드 실패 (네트워크 확인)');
+            } finally {
+                setIsSyncing(false);
+            }
+        }
+    };
+
     return {
         sheet,
         savedAt,
@@ -314,6 +351,7 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
         getAllHistory,
         generateDummyData,
         clearDemoData,
-        testSync
+        testSync,
+        finalizeSheet
     };
 };

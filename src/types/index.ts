@@ -31,4 +31,5 @@ export interface DailySheet {
   breads: Record<string, BreadRecord>;
   memo: string;
   isDemo?: boolean; // true if this is demo/simulator data
+  status?: 'draft' | 'finalized';
 }

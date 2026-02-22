@@ -22,7 +22,7 @@ const App: React.FC = () => {
   const {
     sheet, savedAt, isDirty, isSyncing, syncMessage,
     saveSheet, updateWeather, updateBreadRecord, updateMemo, loadDate,
-    getAllHistory, generateDummyData, clearDemoData, testSync
+    getAllHistory, generateDummyData, clearDemoData, testSync, finalizeSheet
   } = useSheet(currentDate, syncUrl);
 
   const allHistory = useMemo(() => getAllHistory(), [sheet]);
@@ -153,6 +153,11 @@ const App: React.FC = () => {
       <header className="app-header no-print">
         <div className="header-left">
           <h1>🍞 빵 생산 지시서</h1>
+          {sheet.status === 'finalized' ? (
+            <div className="status-badge finalized">🔒 최종 확정됨</div>
+          ) : (
+            <div className="status-badge draft">🔓 작성 중 (미확정)</div>
+          )}
           <nav className="tab-nav">
             <button
               className={`tab-btn ${activeTab === 'edit' ? 'active' : ''}`}
@@ -197,6 +202,12 @@ const App: React.FC = () => {
             <span className="last-saved-time">
               마지막 저장: {savedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
+          )}
+
+          {sheet.status !== 'finalized' ? (
+            <button className="finalize-btn" onClick={finalizeSheet}>🔓 최종 확정하기</button>
+          ) : (
+            <button className="finalize-btn finalized" disabled>🔒 최종 확정완료</button>
           )}
 
           <button className="print-btn" onClick={() => window.print()}>🖨️ 인쇄하기</button>

@@ -210,6 +210,54 @@ textarea {
   font-weight: 600;
 }
 
+/* Status Badges */
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.status-badge.draft {
+  background: rgba(212, 163, 115, 0.2);
+  color: var(--secondary);
+  border: 1px solid var(--secondary);
+}
+
+.status-badge.finalized {
+  background: rgba(96, 108, 56, 0.2);
+  color: #a3b18a;
+  border: 1px solid var(--success);
+}
+
+/* Finalize Button */
+.finalize-btn {
+  background: #bc6c25;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 700;
+  transition: all 0.2s;
+}
+
+.finalize-btn:hover {
+  background: #a65d1d;
+  transform: translateY(-1px);
+}
+
+.finalize-btn.finalized {
+  background: var(--success);
+  opacity: 0.8;
+  cursor: default;
+}
+
+.finalize-btn.finalized:hover {
+  transform: none;
+}
+
 /* Weather */
 .weather-section {
   margin-bottom: 30px;
