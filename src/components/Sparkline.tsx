@@ -80,12 +80,12 @@ export const Sparkline: React.FC<Props> = ({
                 const weatherIcon = d.weather ? (WEATHER_ICONS[d.weather] ?? '') : '';
                 return (
                     <g key={i}>
-                        <text x={x} y={PAD.top + innerH + 9} className="spark-xlabel" textAnchor="middle"
-                            fill={isWeekend ? '#f39c12' : 'rgba(255,255,255,0.5)'}>
+                        <text x={x} y={PAD.top + innerH + 11} className="spark-xlabel" textAnchor="middle"
+                            fill={isWeekend ? '#f39c12' : 'rgba(255,255,255,0.7)'}>
                             {dayLabel}
                         </text>
                         {weatherIcon && (
-                            <text x={x} y={PAD.top + innerH + 20} className="spark-xlabel-weather" textAnchor="middle">
+                            <text x={x} y={PAD.top + innerH + 24} className="spark-xlabel-weather" textAnchor="middle" fontSize="10px">
                                 {weatherIcon}
                             </text>
                         )}

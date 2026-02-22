@@ -235,17 +235,19 @@ const App: React.FC = () => {
             <div key={w.date} className={`weather-card ${w.label === '당일' ? 'today' : ''}`}>
               <div className="weather-label">{w.label}</div>
               <div className="weather-date">{w.date.slice(5)}</div>
-              <div className="weather-select">
-                {(Object.keys(WEATHER_ICONS) as Weather[]).map(type => (
-                  <button
-                    key={type}
-                    className={`weather-icon-btn ${w.weather === type ? 'active' : ''}`}
-                    onClick={() => updateWeather(i, type)}
-                    title={type}
-                  >
-                    {WEATHER_ICONS[type]}
-                  </button>
-                ))}
+              <div className="weather-display">
+                <button
+                  className="weather-main-btn"
+                  onClick={() => {
+                    const types = Object.keys(WEATHER_ICONS) as Weather[];
+                    const currentIdx = types.indexOf(w.weather || 'sunny');
+                    const nextIdx = (currentIdx + 1) % types.length;
+                    updateWeather(i, types[nextIdx]);
+                  }}
+                  title="날씨 변경하려면 클릭"
+                >
+                  {w.weather ? WEATHER_ICONS[w.weather] : '❓'}
+                </button>
               </div>
             </div>
           ))}
