@@ -57,24 +57,35 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
     const [isDirty, setIsDirty] = useState(false);
 
     const saveSheet = async () => {
+        const trimmedUrl = syncUrl?.trim();
+
+        // Local Save first
         localStorage.setItem(`${STORAGE_KEY}_${sheet.date}`, JSON.stringify(sheet));
         setSavedAt(new Date());
         setIsDirty(false);
 
-        if (syncUrl) {
+        if (trimmedUrl) {
             setIsSyncing(true);
+            setSyncMessage('구글 시트 업로드 중...');
             try {
-                const response = await fetch(syncUrl, {
+                // Use no-cors for broadest compatibility with GAS POST redirects
+                // Note: we won't know the exact response body, but the request will reach GAS.
+                await fetch(trimmedUrl, {
                     method: 'POST',
+                    mode: 'no-cors',
+                    cache: 'no-cache',
+                    headers: {
+                        'Content-Type': 'text/plain'
+                    },
                     body: JSON.stringify(sheet)
                 });
-                if (response.ok) {
-                    setSyncMessage('구글 시트 동기화 완료');
-                    setTimeout(() => setSyncMessage(null), 3000);
-                }
+
+                setSyncMessage('구글 시트 동기화 완료');
+                setTimeout(() => setSyncMessage(null), 3000);
             } catch (e) {
                 console.error('Sync failed', e);
-                setSyncMessage('동기화 실패');
+                setSyncMessage('동기화 실패 (네트워크 확인)');
+                setTimeout(() => setSyncMessage(null), 5000);
             } finally {
                 setIsSyncing(false);
             }
@@ -107,25 +118,27 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
     const loadDate = async (date: string) => {
         const localSaved = localStorage.getItem(`${STORAGE_KEY}_${date}`);
         let currentSheet: DailySheet | null = localSaved ? JSON.parse(localSaved) : null;
+        const trimmedUrl = syncUrl?.trim();
 
-        if (syncUrl) {
+        if (trimmedUrl) {
             setIsSyncing(true);
+            setSyncMessage('데이터 동기화 중...');
             try {
-                const response = await fetch(`${syncUrl}?date=${date}`);
+                // GET requests to GAS work fine with default fetch (it follows redirects)
+                const response = await fetch(`${trimmedUrl}?date=${date}`);
                 if (response.ok) {
                     const remoteData = await response.json();
                     if (remoteData && remoteData.date === date) {
-                        // Merge or overwrite if remote is newer? For now, if we have local, we keep it, 
-                        // but if we don't, we take remote. Or always take remote as truth.
-                        // Let's take remote as truth if it exists.
                         currentSheet = remoteData;
                         localStorage.setItem(`${STORAGE_KEY}_${date}`, JSON.stringify(remoteData));
+                        setSavedAt(new Date());
                     }
                 }
             } catch (e) {
                 console.error('Remote fetch failed', e);
             } finally {
                 setIsSyncing(false);
+                setSyncMessage(null);
             }
         }
 
