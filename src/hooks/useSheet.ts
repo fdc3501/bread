@@ -124,7 +124,6 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
             setIsSyncing(true);
             setSyncMessage('데이터 동기화 중...');
             try {
-                // GET requests to GAS work fine with default fetch (it follows redirects)
                 const response = await fetch(`${trimmedUrl}?date=${date}`);
                 if (response.ok) {
                     const remoteData = await response.json();
@@ -135,13 +134,19 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
                         };
                         localStorage.setItem(`${STORAGE_KEY}_${date}`, JSON.stringify(currentSheet));
                         setSavedAt(new Date());
+                        setSyncMessage('동기화 성공 ✅');
+                    } else if (remoteData && remoteData.result === 'not_found') {
+                        setSyncMessage('시트에 데이터 없음');
                     }
+                } else {
+                    setSyncMessage(`동기화 오류 (${response.status})`);
                 }
             } catch (e) {
                 console.error('Remote fetch failed', e);
+                setSyncMessage('동기화 실패 (네트워크/CORS)');
             } finally {
                 setIsSyncing(false);
-                setSyncMessage(null);
+                setTimeout(() => setSyncMessage(null), 3000);
             }
         }
 

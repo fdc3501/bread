@@ -32,6 +32,13 @@ const App: React.FC = () => {
     localStorage.setItem('google_sheets_url', syncUrl);
   }, [syncUrl]);
 
+  // Sync data on mount
+  useEffect(() => {
+    if (syncUrl) {
+      loadDate(currentDate);
+    }
+  }, []);
+
   const getSparklineData = (breadId: string) => {
     const last7Days = [];
     const baseDate = new Date(currentDate);
