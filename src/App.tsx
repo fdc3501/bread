@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useSheet } from './hooks/useSheet';
 import { BREAD_LIST } from './data/breads';
 import type { Weather } from './types';
-import { AnalysisDashboard } from './components/AnalysisDashboard';
+import AnalysisDashboard from './components/AnalysisDashboard';
 import { Sparkline } from './components/Sparkline';
 import './App.css';
 
