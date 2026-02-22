@@ -20,6 +20,7 @@ const App: React.FC = () => {
   const [lat, setLat] = useState(() => Number(localStorage.getItem('latitude')) || 37.526);
   const [lng, setLng] = useState(() => Number(localStorage.getItem('longitude')) || 126.674);
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortMode, setSortMode] = useState<'original' | 'abc'>('original');
   const [isAddingBread, setIsAddingBread] = useState(false);
   const [newBread, setNewBread] = useState<{ name: string, group: 'A' | 'B', defaultQty: string | number }>({ name: '', group: 'A', defaultQty: '' });
 
@@ -146,10 +147,13 @@ const App: React.FC = () => {
     const rawItems = masterBreadList.filter(item => item.group === group);
 
     // 1. Filter by search term
-    // 2. Sort by name (가나다 순)
-    const items = rawItems
-      .filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()))
-      .sort((a, b) => a.name.localeCompare(b.name, 'ko-KR'));
+    const itemsWithSearch = rawItems
+      .filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    // 2. Conditionally sort by name (가나다 순)
+    const items = sortMode === 'abc'
+      ? [...itemsWithSearch].sort((a, b) => a.name.localeCompare(b.name, 'ko-KR'))
+      : itemsWithSearch;
 
     const hours = Array.from({ length: 16 }, (_, i) => i + 7); // 07:00 ~ 22:00
 
@@ -382,12 +386,21 @@ const App: React.FC = () => {
                   <button className="clear-search" onClick={() => setSearchTerm('')}>✕</button>
                 )}
               </div>
-              <button
-                className={`add-item-toggle ${isAddingBread ? 'active' : ''}`}
-                onClick={() => setIsAddingBread(!isAddingBread)}
-              >
-                {isAddingBread ? '취소' : '➕ 빵 종류 추가'}
-              </button>
+              <div className="filter-group">
+                <button
+                  className={`sort-toggle-btn ${sortMode === 'abc' ? 'active' : ''}`}
+                  onClick={() => setSortMode(sortMode === 'original' ? 'abc' : 'original')}
+                  title={sortMode === 'original' ? '가나다순으로 정렬' : '원래 순서로 정렬'}
+                >
+                  {sortMode === 'original' ? '🔃 원래순서' : '🔠 가나다순'}
+                </button>
+                <button
+                  className={`add-item-toggle ${isAddingBread ? 'active' : ''}`}
+                  onClick={() => setIsAddingBread(!isAddingBread)}
+                >
+                  {isAddingBread ? '취소' : '➕ 빵 종류 추가'}
+                </button>
+              </div>
             </div>
 
             {isAddingBread && (
