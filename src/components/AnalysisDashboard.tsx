@@ -21,12 +21,16 @@ const AnalysisDashboard: React.FC<Props> = ({ history }) => {
         // labels: ['전전날', '전날', '당일', '다음날', '다다음날', '다다다음날']
         return todaySheet.weather.map(wRec => {
             const historicalEntry = history.find(h => h.date === wRec.date);
+            const labelMap: Record<string, string> = {
+                '전전날': 'D-2', '전날': 'D-1', '당일': 'D',
+                '다음날': 'D+1', '다다음날': 'D+2', '다다다음날': 'D+3'
+            };
             return {
                 prod: historicalEntry ? (Number(historicalEntry.breads[breadId]?.produceQty) || 0) : 0,
                 disp: historicalEntry ? (Number(historicalEntry.breads[breadId]?.disposal) || 0) : 0,
                 rem: historicalEntry ? (Number(historicalEntry.breads[breadId]?.remain) || 0) : 0,
                 date: wRec.date,
-                label: wRec.label, // '전전날', '전날' etc.
+                label: labelMap[wRec.label] || wRec.label,
                 weather: wRec.weather || undefined,
             };
         });

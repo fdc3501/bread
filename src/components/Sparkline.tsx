@@ -33,7 +33,7 @@ export const Sparkline: React.FC<Props> = ({
     width = 90,
     height = 36,
 }) => {
-    const BOTTOM_PAD = showXLabels ? 32 : 10;
+    const BOTTOM_PAD = showXLabels ? 42 : 10;
     const PAD = { top: 6, right: 6, bottom: BOTTOM_PAD, left: 24 };
     const W = width;
     const H = height;
@@ -86,7 +86,7 @@ export const Sparkline: React.FC<Props> = ({
                             {dayLabel}
                         </text>
                         {weatherIcon && (
-                            <text x={x} y={PAD.top + innerH + 24} className="spark-xlabel-weather" textAnchor="middle" fontSize="10px">
+                            <text x={x} y={PAD.top + innerH + 25} className="spark-xlabel-weather" textAnchor="middle" style={{ fontSize: '12px' }}>
                                 {weatherIcon}
                             </text>
                         )}
@@ -111,12 +111,12 @@ export const Sparkline: React.FC<Props> = ({
             })()}
 
             {/* Legend */}
-            <rect x={PAD.left} y={H - 7} width={5} height={2} className="spark-legend-prod" />
-            <rect x={PAD.left + 16} y={H - 7} width={5} height={2} className="spark-legend-disp" />
-            <rect x={PAD.left + 32} y={H - 7} width={5} height={2} className="spark-legend-rem" />
-            <text x={PAD.left + 7} y={H - 5} className="spark-legend-text">생산</text>
-            <text x={PAD.left + 23} y={H - 5} className="spark-legend-text">폐기</text>
-            <text x={PAD.left + 39} y={H - 5} className="spark-legend-text">잔량</text>
+            <rect x={PAD.left} y={H - 8} width={5} height={2} className="spark-legend-prod" />
+            <rect x={PAD.left + 22} y={H - 8} width={5} height={2} className="spark-legend-disp" />
+            <rect x={PAD.left + 44} y={H - 8} width={5} height={2} className="spark-legend-rem" />
+            <text x={PAD.left + 7} y={H - 6} className="spark-legend-text" style={{ fontSize: '7px' }}>생산</text>
+            <text x={PAD.left + 29} y={H - 6} className="spark-legend-text" style={{ fontSize: '7px' }}>폐기</text>
+            <text x={PAD.left + 51} y={H - 6} className="spark-legend-text" style={{ fontSize: '7px' }}>잔량</text>
         </svg>
     );
 };
