@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import type { DailySheet, BreadRecord, Weather, WeatherRecord } from '../types';
+import type { DailySheet, BreadRecord, Weather, WeatherRecord, BreadItem, BreadGroup } from '../types';
 import { BREAD_LIST } from '../data/breads';
 
 const STORAGE_KEY = 'bread_production_sheets';
+const BREAD_LIST_KEY = 'bread_production_master_list';
 
 const getInitialWeather = (baseDate: Date): WeatherRecord[] => {
     const labels = ['전전날', '전날', '당일', '다음날', '다다음날', '다다다음날'];
@@ -28,9 +29,9 @@ const mapWMOCodeToWeather = (code: number): Weather => {
     return 'sunny';
 };
 
-const getEmptyBreads = (): Record<string, BreadRecord> => {
+const getEmptyBreads = (breadList: BreadItem[]): Record<string, BreadRecord> => {
     const records: Record<string, BreadRecord> = {};
-    BREAD_LIST.forEach(bread => {
+    breadList.forEach(bread => {
         records[bread.id] = {
             breadId: bread.id,
             remain: '',
@@ -47,13 +48,25 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
     const [isSyncing, setIsSyncing] = useState(false);
     const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
+    const [masterBreadList, setMasterBreadList] = useState<BreadItem[]>(() => {
+        const saved = localStorage.getItem(BREAD_LIST_KEY);
+        if (saved) return JSON.parse(saved);
+        return BREAD_LIST;
+    });
+
     const [sheet, setSheet] = useState<DailySheet>(() => {
         const saved = localStorage.getItem(`${STORAGE_KEY}_${initialDate}`);
         if (saved) return JSON.parse(saved);
+
+        // Get bread list from localStorage if available, else use default
+        const currentBreadList = localStorage.getItem(BREAD_LIST_KEY)
+            ? JSON.parse(localStorage.getItem(BREAD_LIST_KEY)!)
+            : BREAD_LIST;
+
         return {
             date: initialDate,
             weather: getInitialWeather(new Date(initialDate)),
-            breads: getEmptyBreads(),
+            breads: getEmptyBreads(currentBreadList),
             memo: ''
         };
     });
@@ -68,8 +81,22 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
     const saveSheet = async () => {
         const trimmedUrl = syncUrl?.trim();
 
+        // Sanitize data: convert empty strings to 0 for remain and disposal before saving
+        const sanitizedBreads = { ...sheet.breads };
+        Object.keys(sanitizedBreads).forEach(id => {
+            const rec = sanitizedBreads[id];
+            sanitizedBreads[id] = {
+                ...rec,
+                remain: rec.remain === '' ? 0 : Number(rec.remain),
+                disposal: rec.disposal === '' ? 0 : Number(rec.disposal),
+                produceQty: rec.produceQty === '' ? 0 : Number(rec.produceQty),
+            };
+        });
+
+        const sheetToSave: DailySheet = { ...sheet, breads: sanitizedBreads };
+
         // Local Save first
-        localStorage.setItem(`${STORAGE_KEY}_${sheet.date}`, JSON.stringify(sheet));
+        localStorage.setItem(`${STORAGE_KEY}_${sheet.date}`, JSON.stringify(sheetToSave));
         setSavedAt(new Date());
         setIsDirty(false);
 
@@ -86,7 +113,7 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
                     headers: {
                         'Content-Type': 'text/plain'
                     },
-                    body: JSON.stringify(sheet)
+                    body: JSON.stringify(sheetToSave)
                 });
 
                 setSyncMessage('구글 시트 동기화 완료');
@@ -109,17 +136,28 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
     };
 
     const updateBreadRecord = (breadId: string, updates: Partial<BreadRecord>) => {
-        // Automatically treat empty strings for remain and disposal as 0 when updating
-        const processedUpdates = { ...updates };
-        if (processedUpdates.remain === '') processedUpdates.remain = '0';
-        if (processedUpdates.disposal === '') processedUpdates.disposal = 0;
+        setSheet(prev => {
+            const currentRecord = prev.breads[breadId] || {
+                breadId,
+                remain: '',
+                disposal: 0,
+                produce: true,
+                produceQty: '',
+                soldOutTime: ''
+            };
 
-        setSheet({
-            ...sheet,
-            breads: {
-                ...sheet.breads,
-                [breadId]: { ...sheet.breads[breadId], ...processedUpdates }
-            }
+            const newRecord = { ...currentRecord, ...updates };
+
+            // If the user cleared the input, we keep it as empty string so placeholder shows
+            // But when saving, it should be treated as 0 (handled in saveSheet or component)
+
+            return {
+                ...prev,
+                breads: {
+                    ...prev.breads,
+                    [breadId]: newRecord
+                }
+            };
         });
         setIsDirty(true);
     };
@@ -185,7 +223,7 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
             const yesterdaySaved = localStorage.getItem(yesterdayKey);
             const yesterdaySheet: DailySheet | null = yesterdaySaved ? JSON.parse(yesterdaySaved) : null;
 
-            const prefillBreads = getEmptyBreads();
+            const prefillBreads = getEmptyBreads(masterBreadList);
             if (yesterdaySheet) {
                 BREAD_LIST.forEach(bread => {
                     const yRec = yesterdaySheet.breads[bread.id];
@@ -423,8 +461,36 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
         }
     };
 
+    const addBreadItem = (name: string, group: BreadGroup, defaultQty: number | null) => {
+        const id = `custom_${Date.now()}`;
+        const newItem: BreadItem = { id, name, group, defaultQty };
+        const newList = [...masterBreadList, newItem];
+        setMasterBreadList(newList);
+        localStorage.setItem(BREAD_LIST_KEY, JSON.stringify(newList));
+
+        // Also add to current sheet if not exists
+        if (!sheet.breads[id]) {
+            updateBreadRecord(id, {
+                breadId: id,
+                remain: '',
+                disposal: 0,
+                produce: true,
+                produceQty: defaultQty || '',
+                soldOutTime: ''
+            });
+        }
+    };
+
+    const deleteBreadItem = (id: string) => {
+        if (!confirm('이 품목을 전체 목록에서 삭제하시겠습니까? (기존 기록은 보존됩니다)')) return;
+        const newList = masterBreadList.filter(item => item.id !== id);
+        setMasterBreadList(newList);
+        localStorage.setItem(BREAD_LIST_KEY, JSON.stringify(newList));
+    };
+
     return {
         sheet,
+        masterBreadList, // Return the master list
         savedAt,
         isDirty,
         isSyncing,
@@ -439,6 +505,8 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
         clearDemoData,
         testSync,
         finalizeSheet,
-        refreshWeather
+        refreshWeather,
+        addBreadItem,
+        deleteBreadItem
     };
 };

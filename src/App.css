@@ -250,7 +250,9 @@ button:active {
 
 input[type="date"],
 input[type="number"],
-textarea {
+input[type="text"],
+textarea,
+select {
   background: var(--bg-input);
   border: 1px solid var(--border);
   color: var(--text-main);
@@ -258,6 +260,18 @@ textarea {
   border-radius: var(--radius-sm);
   font-family: inherit;
   outline: none;
+  transition: border-color 0.2s;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--primary);
+}
+
+::placeholder {
+  color: var(--text-muted);
+  opacity: 0.5;
 }
 
 .print-btn {
@@ -330,6 +344,125 @@ textarea {
 .finalize-btn.finalized {
   background: var(--success);
   cursor: default;
+}
+
+/* Edit Controls (Search & Add) */
+.edit-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 15px;
+}
+
+.search-bar {
+  position: relative;
+  flex: 1;
+  max-width: 400px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.search-bar input {
+  width: 100%;
+  padding-left: 36px;
+  padding-right: 36px;
+  height: 42px;
+}
+
+.clear-search {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  color: var(--text-muted);
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  font-size: 14px;
+  opacity: 0.5;
+}
+
+.clear-search:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+}
+
+.add-item-toggle {
+  background: var(--glass);
+  border: 1px dashed var(--primary);
+  color: var(--primary);
+}
+
+.add-item-toggle.active {
+  background: var(--error);
+  color: white;
+  border-style: solid;
+}
+
+.add-bread-form {
+  background: var(--bg-card);
+  padding: 20px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--primary);
+  margin-bottom: 20px;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.add-bread-form form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.add-bread-form input,
+.add-bread-form select {
+  flex: 1;
+  min-width: 150px;
+}
+
+.submit-add-btn {
+  background: var(--primary);
+  color: white;
+}
+
+.delete-bread-btn {
+  background: transparent;
+  color: var(--error);
+  font-size: 1.2rem;
+  padding: 4px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  opacity: 0.3;
+  transition: all 0.2s;
+}
+
+.delete-bread-btn:hover {
+  background: rgba(231, 76, 60, 0.1);
+  opacity: 1;
+  transform: scale(1.1);
 }
 
 /* Weather */

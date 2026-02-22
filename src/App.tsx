@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSheet } from './hooks/useSheet';
-import { BREAD_LIST } from './data/breads';
 import type { Weather, WeatherRecord } from './types';
 import AnalysisDashboard from './components/AnalysisDashboard';
 import { Sparkline } from './components/Sparkline';
@@ -20,12 +19,15 @@ const App: React.FC = () => {
   const [syncUrl, setSyncUrl] = useState(() => localStorage.getItem('google_sheets_url') || '');
   const [lat, setLat] = useState(() => Number(localStorage.getItem('latitude')) || 37.526);
   const [lng, setLng] = useState(() => Number(localStorage.getItem('longitude')) || 126.674);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isAddingBread, setIsAddingBread] = useState(false);
+  const [newBread, setNewBread] = useState<{ name: string, group: 'A' | 'B', defaultQty: string | number }>({ name: '', group: 'A', defaultQty: '' });
 
   const {
-    sheet, savedAt, isDirty, isSyncing, syncMessage,
+    sheet, masterBreadList, savedAt, isDirty, isSyncing, syncMessage,
     saveSheet, updateWeather, updateBreadRecord, updateMemo, loadDate,
     getAllHistory, generateDummyData, clearDemoData, testSync, finalizeSheet,
-    refreshWeather
+    refreshWeather, addBreadItem, deleteBreadItem
   } = useSheet(currentDate, syncUrl);
 
   const allHistory = useMemo(() => {
@@ -89,7 +91,10 @@ const App: React.FC = () => {
   };
 
   const copyToKakao = () => {
-    const itemsExcluded = BREAD_LIST.filter(item => !sheet.breads[item.id].produce);
+    const itemsExcluded = masterBreadList.filter(item => {
+      const rec = sheet.breads[item.id];
+      return rec && !rec.produce;
+    });
     const dateStr = new Date(currentDate).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
     let text = `🍞 ${dateStr} 생산 제외 품목\n\n`;
 
@@ -129,8 +134,23 @@ const App: React.FC = () => {
     });
   };
 
+  const handleAddBread = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newBread.name.trim()) return;
+    addBreadItem(newBread.name.trim(), newBread.group, newBread.defaultQty === '' ? null : Number(newBread.defaultQty));
+    setNewBread({ name: '', group: 'A', defaultQty: '' });
+    setIsAddingBread(false);
+  };
+
   const renderTable = (group: 'A' | 'B') => {
-    const items = BREAD_LIST.filter(item => item.group === group);
+    const rawItems = masterBreadList.filter(item => item.group === group);
+
+    // 1. Filter by search term
+    // 2. Sort by name (가나다 순)
+    const items = rawItems
+      .filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()))
+      .sort((a, b) => a.name.localeCompare(b.name, 'ko-KR'));
+
     const hours = Array.from({ length: 16 }, (_, i) => i + 7); // 07:00 ~ 22:00
 
     return (
@@ -138,9 +158,9 @@ const App: React.FC = () => {
         <table className="bread-table">
           <thead>
             <tr>
-              <th>빵 이름</th>
+              <th style={{ width: '220px' }}>빵 이름</th>
               <th>잔량</th>
-              <th>폐기</th>
+              <th title="기부와 묶음빵">폐기(기부/묶음빵)</th>
               <th className="no-print">추세(7일)</th>
               <th>생산</th>
               <th>내일 생산수량 결정</th>
@@ -164,14 +184,16 @@ const App: React.FC = () => {
                       value={record.remain}
                       onChange={(e) => updateBreadRecord(item.id, { remain: e.target.value })}
                       placeholder="0"
+                      onFocus={(e) => e.target.select()}
                     />
                   </td>
                   <td>
                     <input
                       type="number"
-                      value={record.disposal}
+                      value={record?.disposal || ''}
                       onChange={(e) => updateBreadRecord(item.id, { disposal: e.target.value })}
                       placeholder="0"
+                      onFocus={(e) => e.target.select()}
                     />
                   </td>
                   <td className="no-print center">
@@ -210,6 +232,15 @@ const App: React.FC = () => {
                         </option>
                       ))}
                     </select>
+                  </td>
+                  <td className="no-print">
+                    <button
+                      className="delete-bread-btn"
+                      onClick={() => deleteBreadItem(item.id)}
+                      title="품목 삭제"
+                    >
+                      🗑️
+                    </button>
                   </td>
                 </tr>
               );
@@ -338,6 +369,55 @@ const App: React.FC = () => {
       <main className="sheet-main">
         {activeTab === 'edit' ? (
           <>
+            <div className="edit-controls no-print">
+              <div className="search-bar">
+                <span className="search-icon">🔍</span>
+                <input
+                  type="text"
+                  placeholder="빵 이름을 검색하세요..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                {searchTerm && (
+                  <button className="clear-search" onClick={() => setSearchTerm('')}>✕</button>
+                )}
+              </div>
+              <button
+                className={`add-item-toggle ${isAddingBread ? 'active' : ''}`}
+                onClick={() => setIsAddingBread(!isAddingBread)}
+              >
+                {isAddingBread ? '취소' : '➕ 빵 종류 추가'}
+              </button>
+            </div>
+
+            {isAddingBread && (
+              <div className="add-bread-form no-print">
+                <form onSubmit={handleAddBread}>
+                  <input
+                    type="text"
+                    placeholder="빵 이름 (예: 소보로빵)"
+                    value={newBread.name}
+                    onChange={(e) => setNewBread({ ...newBread, name: e.target.value })}
+                    required
+                  />
+                  <select
+                    value={newBread.group}
+                    onChange={(e) => setNewBread({ ...newBread, group: e.target.value as 'A' | 'B' })}
+                  >
+                    <option value="A">기본 빵류 (A)</option>
+                    <option value="B">기타 & 고로케 (B)</option>
+                  </select>
+                  <input
+                    type="number"
+                    placeholder="기본 생산량"
+                    value={newBread.defaultQty}
+                    onChange={(e) => setNewBread({ ...newBread, defaultQty: e.target.value })}
+                  />
+                  <button type="submit" className="submit-add-btn">추가하기</button>
+                </form>
+              </div>
+            )}
+
             <div className="group-sections">
               <div className="section">
                 <h2>기본 빵류 (A)</h2>
