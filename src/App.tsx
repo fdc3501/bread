@@ -373,7 +373,7 @@ const App: React.FC = () => {
             </section>
           </>
         ) : activeTab === 'analyze' ? (
-          <AnalysisDashboard history={history} />
+          <AnalysisDashboard history={history} todayDate={currentDate} />
         ) : activeTab === 'demo' ? (
           <div className="demo-section">
             <div className="demo-card">

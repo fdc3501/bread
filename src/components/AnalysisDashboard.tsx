@@ -6,16 +6,19 @@ import './AnalysisDashboard.css';
 
 interface Props {
     history: DailySheet[];
+    todayDate?: string;
 }
 
-const AnalysisDashboard: React.FC<Props> = ({ history }) => {
+const AnalysisDashboard: React.FC<Props> = ({ history, todayDate }) => {
     const hasDemoData = useMemo(() => history.some(s => s.isDemo), [history]);
 
     // Build 6-day sparkline data matching the weather window (-2 to +3 days)
     const getSparklineData = (breadId: string) => {
         if (history.length === 0) return [];
         const sorted = [...history].sort((a, b) => a.date.localeCompare(b.date));
-        const todaySheet = sorted[sorted.length - 1];
+
+        // Pick the sheet matching todayDate, or fallback to the latest one
+        const todaySheet = (todayDate ? history.find(h => h.date === todayDate) : null) || sorted[sorted.length - 1];
 
         return todaySheet.weather.map(wRec => {
             const historicalEntry = history.find(h => h.date === wRec.date);
