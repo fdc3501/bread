@@ -38,7 +38,7 @@ export const Sparkline: React.FC<Props> = ({
     const W = width;
     const H = height;
 
-    const hasData = data.some(d => d.prod > 0);
+    const hasData = data.some(d => d.prod > 0 || d.disp > 0 || d.rem > 0);
     if (!hasData) return <div className="sparkline-empty">데이터 없음</div>;
 
     const allValues = data.flatMap(d => [d.prod || 0, d.disp || 0, d.rem || 0]);
@@ -86,15 +86,15 @@ export const Sparkline: React.FC<Props> = ({
                             fill={isWeekend ? '#f39c12' : 'rgba(255,255,255,0.7)'}>
                             {dayLabel}
                         </text>
-                        <foreignObject x={x - 10} y={PAD.top + innerH + 22} width={20} height={20}>
+                        <foreignObject x={x - 12} y={PAD.top + innerH + 18} width={24} height={24}>
                             <div style={{
                                 display: 'flex',
                                 justifyContent: 'center',
                                 alignItems: 'center',
-                                fontSize: '16px',
+                                fontSize: '18px',
                                 width: '100%',
                                 height: '100%',
-                                cursor: 'default'
+                                pointerEvents: 'none'
                             }}>
                                 {weatherIcon || (d.date ? '❓' : '')}
                             </div>
