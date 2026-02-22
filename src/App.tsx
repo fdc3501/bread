@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSheet } from './hooks/useSheet';
 import { BREAD_LIST } from './data/breads';
-import type { Weather } from './types';
+import type { Weather, WeatherRecord } from './types';
 import AnalysisDashboard from './components/AnalysisDashboard';
 import { Sparkline } from './components/Sparkline';
 import './App.css';
@@ -231,7 +231,7 @@ const App: React.FC = () => {
 
       <section className="weather-section">
         <div className="weather-grid">
-          {sheet.weather.map((w: any, i: number) => (
+          {sheet.weather.map((w: WeatherRecord, i: number) => (
             <div key={w.date} className={`weather-card ${w.label === '당일' ? 'today' : ''}`}>
               <div className="weather-label">{w.label}</div>
               <div className="weather-date">{w.date.slice(5)}</div>
@@ -246,7 +246,7 @@ const App: React.FC = () => {
                   }}
                   title="날씨 변경하려면 클릭"
                 >
-                  {w.weather ? WEATHER_ICONS[w.weather] : '❓'}
+                  {w.weather ? WEATHER_ICONS[w.weather as Weather] : '❓'}
                 </button>
               </div>
             </div>
