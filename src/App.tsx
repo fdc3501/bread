@@ -152,7 +152,7 @@ const App: React.FC = () => {
     <div className="app-container">
       <header className="app-header no-print">
         <div className="header-left">
-          <h1>🍞 빵 생산 지시서 (v2.2)</h1>
+          <h1>🍞 빵 생산 지시서</h1>
           <nav className="tab-nav">
             <button
               className={`tab-btn ${activeTab === 'edit' ? 'active' : ''}`}
