@@ -29,6 +29,16 @@ body {
   margin: 0;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  display: flex;
+  justify-content: center;
+}
+
+.app-container {
+  width: 100%;
+  max-width: 1100px;
+  min-height: 100vh;
+  padding: 16px 20px;
+  box-sizing: border-box;
 }
 
 /* Global Button Styles */
@@ -324,13 +334,14 @@ textarea {
 
 /* Weather */
 .weather-section {
-  margin-bottom: 30px;
+  margin-bottom: 20px;
 }
 
 .weather-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+  margin: 0 auto;
 }
 
 .weather-card {
@@ -420,8 +431,8 @@ textarea {
   justify-content: center;
   align-items: center;
   gap: 10px;
-  margin-top: 8px;
-  font-size: 0.85rem;
+  margin-top: 4px;
+  font-size: 0.8rem;
   font-weight: 600;
 }
 
@@ -518,9 +529,9 @@ textarea {
 
 /* Memo */
 .memo-section {
-  margin-top: 40px;
+  margin-top: 25px;
   background: var(--bg-card);
-  padding: 20px;
+  padding: 16px;
   border-radius: 8px;
 }
 

@@ -89,54 +89,40 @@ const App: React.FC = () => {
   };
 
   const copyToKakao = () => {
-    const itemsToProduce = BREAD_LIST.filter(item => sheet.breads[item.id].produce);
-    if (itemsToProduce.length === 0) return alert('생산할 품목이 없습니다.');
-
+    const itemsExcluded = BREAD_LIST.filter(item => !sheet.breads[item.id].produce);
     const dateStr = new Date(currentDate).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
-    let text = `🍞 ${dateStr} 생산 지시서\n\n`;
+    let text = `🍞 ${dateStr} 생산 제외 품목\n\n`;
 
-    // Group items by A/B for better readability
-    const groupA = itemsToProduce.filter(i => i.group === 'A');
-    const groupB = itemsToProduce.filter(i => i.group === 'B');
+    if (itemsExcluded.length === 0) {
+      text = `🍞 ${dateStr} 생산 지시서\n- 전 품목 정상 생산\n\n`;
+    } else {
+      // Group items by A/B for better readability
+      const groupA = itemsExcluded.filter(i => i.group === 'A');
+      const groupB = itemsExcluded.filter(i => i.group === 'B');
 
-    if (groupA.length > 0) {
-      text += `[기본 빵류]\n`;
-      groupA.forEach(item => {
-        text += `- ${item.name}: ${sheet.breads[item.id].produceQty}개\n`;
-      });
-      text += '\n';
+      if (groupA.length > 0) {
+        text += `[기본 빵류 제외]\n`;
+        groupA.forEach(item => {
+          text += `- ${item.name}\n`;
+        });
+        text += '\n';
+      }
+
+      if (groupB.length > 0) {
+        text += `[기타/고로케 제외]\n`;
+        groupB.forEach(item => {
+          text += `- ${item.name}\n`;
+        });
+        text += '\n';
+      }
     }
-
-    if (groupB.length > 0) {
-      text += `[기타/고로케]\n`;
-      groupB.forEach(item => {
-        text += `- ${item.name}: ${sheet.breads[item.id].produceQty}개\n`;
-      });
-      text += '\n';
-    }
-
-    const todayWeather = sheet.weather.find(w => w.label === '당일');
-    const tomorrowWeather = sheet.weather.find(w => w.label === '다음날');
-
-    if (todayWeather?.weather) {
-      text += `📅 오늘(${todayWeather.date.slice(5)}) 날씨: ${WEATHER_ICONS[todayWeather.weather]}`;
-      if (todayWeather.temp !== undefined) text += ` ${Math.round(todayWeather.temp)}°C`;
-      if (todayWeather.wind !== undefined) text += ` 🌬️${todayWeather.wind.toFixed(1)}m/s`;
-      text += '\n';
-    }
-    if (tomorrowWeather?.weather) {
-      text += `📅 내일(${tomorrowWeather.date.slice(5)}) 예보: ${WEATHER_ICONS[tomorrowWeather.weather]}`;
-      if (tomorrowWeather.temp !== undefined) text += ` ${Math.round(tomorrowWeather.temp)}°C`;
-      text += '\n';
-    }
-    text += '\n';
 
     if (sheet.memo) {
-      text += `📝 메모: ${sheet.memo}\n`;
+      text += `📝 메모/주의사항:\n${sheet.memo}\n`;
     }
 
     navigator.clipboard.writeText(text).then(() => {
-      alert('카톡용 텍스트가 복사되었습니다. 카카오톡에 붙여넣기 하세요!');
+      alert('카톡용 텍스트(생산 제외 품목 중심)가 복사되었습니다!');
     }).catch(err => {
       console.error('Copy failed', err);
       alert('복사 실패. 브라우저 권한을 확인해 주세요.');
