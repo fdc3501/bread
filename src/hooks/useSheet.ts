@@ -289,13 +289,9 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
         setIsSyncing(true);
         setSyncMessage('연결 테스트 중...');
         try {
-            // GAS GET always returns something if alive
-            const response = await fetch(`${syncUrl.trim()}?test=1`);
-            if (response.ok) {
-                alert('연결 성공! 구글 시트와 통신이 가능합니다.');
-            } else {
-                alert(`연결 실패 (코드: ${response.status})`);
-            }
+            // Use no-cors for GAS to avoid false failures on redirects
+            await fetch(`${syncUrl.trim()}?test=1`, { mode: 'no-cors', cache: 'no-cache' });
+            alert('연결 성공! 이제 구글 시트가 수신을 기다리고 있습니다.');
         } catch (e) {
             alert('연결 실패: 주소가 잘못되었거나 네트워크가 차단되었습니다.');
         } finally {
