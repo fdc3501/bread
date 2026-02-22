@@ -285,7 +285,7 @@ const App: React.FC = () => {
           <div className="settings-section">
             <div className="settings-card">
               <div className="settings-item">
-                <h3>⚙️ 앱 설정 (v2.3)</h3>
+                <h3>⚙️ 앱 설정</h3>
                 <p className="description">🔗 구글 시트 연동 (동기화)</p>
                 <div className="sync-input-group">
                   <input
@@ -305,7 +305,7 @@ const App: React.FC = () => {
                 </div>
                 {syncUrl ? (
                   <div className="sync-status-info">
-                    ✅ 주소가 입력되었습니다. (v2.3 확인됨)
+                    ✅ 주소가 입력되었습니다.
                   </div>
                 ) : (
                   <div className="sync-status-info" style={{ color: '#e74c3c' }}>
