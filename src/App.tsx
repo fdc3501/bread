@@ -284,10 +284,9 @@ const App: React.FC = () => {
         ) : (
           <div className="settings-section">
             <div className="settings-card">
-              <h2>⚙️ 앱 설정</h2>
-              <section className="settings-item">
-                <h3>🔗 구글 시트 연동 (동기화)</h3>
-                <p>PC와 태블릿 간에 데이터를 공유하려면 구글 앱스 스크립트 URL을 입력하세요.</p>
+              <div className="settings-item">
+                <h3>⚙️ 앱 설정 (v2.1)</h3>
+                <p className="description">🔗 구글 시트 연동 (동기화)</p>
                 <div className="sync-input-group">
                   <input
                     type="text"
