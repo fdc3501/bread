@@ -356,22 +356,32 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
         setIsSyncing(true);
         setSyncMessage('날씨 정보 가져오는 중...');
         try {
-            // Fetch 6 days of weather (from 2 days ago to 3 days later)
             const startDate = sheet.weather[0].date;
             const endDate = sheet.weather[5].date;
 
-            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=weathercode&timezone=auto&start_date=${startDate}&end_date=${endDate}`;
+            // Use weather_code (modern) and timezone=auto
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=weather_code&timezone=auto&start_date=${startDate}&end_date=${endDate}`;
             const response = await fetch(url);
+
             if (response.ok) {
                 const data = await response.json();
-                if (data.daily && data.daily.weathercode) {
-                    const newWeather = sheet.weather.map((w, i) => ({
-                        ...w,
-                        weather: mapWMOCodeToWeather(data.daily.weathercode[i])
-                    }));
+                if (data.daily && data.daily.time && data.daily.weather_code) {
+                    const apiDates = data.daily.time as string[];
+                    const apiCodes = data.daily.weather_code as number[];
+
+                    const newWeather = sheet.weather.map(w => {
+                        const idx = apiDates.indexOf(w.date);
+                        if (idx !== -1) {
+                            return { ...w, weather: mapWMOCodeToWeather(apiCodes[idx]) };
+                        }
+                        return w;
+                    });
+
                     setSheet({ ...sheet, weather: newWeather });
                     setIsDirty(true);
                     setSyncMessage('날씨 업데이트 완료 🌤️');
+                } else {
+                    throw new Error('Invalid API response');
                 }
             } else {
                 setSyncMessage('날씨 정보를 가져오지 못했습니다.');
@@ -379,6 +389,7 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
         } catch (e) {
             console.error('Weather fetch failed', e);
             setSyncMessage('날씨 API 연결 실패');
+            alert('날씨를 가져오는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
         } finally {
             setIsSyncing(false);
             setTimeout(() => setSyncMessage(null), 3000);
