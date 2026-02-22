@@ -134,6 +134,32 @@ body {
   margin-top: 10px;
 }
 
+.location-input-group {
+  display: flex;
+  gap: 15px;
+  margin-top: 10px;
+}
+
+.coord-input {
+  flex: 1;
+}
+
+.coord-input label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 5px;
+}
+
+.coord-input input {
+  width: 100%;
+  padding: 8px 10px;
+  background: #222;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: white;
+}
+
 .settings-item.help {
   background: rgba(255, 255, 255, 0.03);
   padding: 20px;
@@ -297,6 +323,36 @@ textarea {
   display: flex;
   justify-content: center;
   gap: 5px;
+}
+
+.weather-card.refresh-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(139, 94, 60, 0.1);
+  border: 1px dashed var(--primary);
+}
+
+.refresh-weather-btn {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.8rem;
+  line-height: 1.3;
+  transition: all 0.2s;
+}
+
+.refresh-weather-btn:hover {
+  background: var(--secondary);
+  transform: scale(1.05);
+}
+
+.refresh-weather-btn:active {
+  transform: scale(0.95);
 }
 
 .weather-icon-btn {

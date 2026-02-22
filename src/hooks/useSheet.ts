@@ -19,6 +19,15 @@ const getInitialWeather = (baseDate: Date): WeatherRecord[] => {
     });
 };
 
+const mapWMOCodeToWeather = (code: number): Weather => {
+    if (code === 0) return 'sunny';
+    if (code >= 1 && code <= 2) return 'partly-cloudy';
+    if (code === 3 || (code >= 45 && code <= 48)) return 'cloudy';
+    if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82) || (code >= 95 && code <= 99)) return 'rainy';
+    if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) return 'snowy';
+    return 'sunny';
+};
+
 const getEmptyBreads = (): Record<string, BreadRecord> => {
     const records: Record<string, BreadRecord> = {};
     BREAD_LIST.forEach(bread => {
@@ -343,6 +352,39 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
         }
     };
 
+    const refreshWeather = async (lat: number, lng: number) => {
+        setIsSyncing(true);
+        setSyncMessage('날씨 정보 가져오는 중...');
+        try {
+            // Fetch 6 days of weather (from 2 days ago to 3 days later)
+            const startDate = sheet.weather[0].date;
+            const endDate = sheet.weather[5].date;
+
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=weathercode&timezone=auto&start_date=${startDate}&end_date=${endDate}`;
+            const response = await fetch(url);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.daily && data.daily.weathercode) {
+                    const newWeather = sheet.weather.map((w, i) => ({
+                        ...w,
+                        weather: mapWMOCodeToWeather(data.daily.weathercode[i])
+                    }));
+                    setSheet({ ...sheet, weather: newWeather });
+                    setIsDirty(true);
+                    setSyncMessage('날씨 업데이트 완료 🌤️');
+                }
+            } else {
+                setSyncMessage('날씨 정보를 가져오지 못했습니다.');
+            }
+        } catch (e) {
+            console.error('Weather fetch failed', e);
+            setSyncMessage('날씨 API 연결 실패');
+        } finally {
+            setIsSyncing(false);
+            setTimeout(() => setSyncMessage(null), 3000);
+        }
+    };
+
     return {
         sheet,
         savedAt,
@@ -358,6 +400,7 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
         generateDummyData,
         clearDemoData,
         testSync,
-        finalizeSheet
+        finalizeSheet,
+        refreshWeather
     };
 };

@@ -18,11 +18,14 @@ const App: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0]);
   const [activeTab, setActiveTab] = useState<'edit' | 'analyze' | 'demo' | 'settings'>('edit');
   const [syncUrl, setSyncUrl] = useState(() => localStorage.getItem('google_sheets_url') || '');
+  const [lat, setLat] = useState(() => Number(localStorage.getItem('latitude')) || 37.526);
+  const [lng, setLng] = useState(() => Number(localStorage.getItem('longitude')) || 126.674);
 
   const {
     sheet, savedAt, isDirty, isSyncing, syncMessage,
     saveSheet, updateWeather, updateBreadRecord, updateMemo, loadDate,
-    getAllHistory, generateDummyData, clearDemoData, testSync, finalizeSheet
+    getAllHistory, generateDummyData, clearDemoData, testSync, finalizeSheet,
+    refreshWeather
   } = useSheet(currentDate, syncUrl);
 
   const allHistory = useMemo(() => getAllHistory(), [sheet]);
@@ -31,6 +34,11 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('google_sheets_url', syncUrl);
   }, [syncUrl]);
+
+  useEffect(() => {
+    localStorage.setItem('latitude', lat.toString());
+    localStorage.setItem('longitude', lng.toString());
+  }, [lat, lng]);
 
   // Sync data on mount
   useEffect(() => {
@@ -241,6 +249,11 @@ const App: React.FC = () => {
               </div>
             </div>
           ))}
+          <div className="weather-card refresh-card">
+            <button className="refresh-weather-btn" title="API에서 날씨 자동 불러오기" onClick={() => refreshWeather(lat, lng)}>
+              🛰️ 자동 날씨<br />불러오기
+            </button>
+          </div>
         </div>
       </section>
 
@@ -330,6 +343,34 @@ const App: React.FC = () => {
                     ⚠️ 주소가 입력되지 않았습니다. 위 칸에 구글 시트 주소를 넣어주세요.
                   </div>
                 )}
+              </div>
+
+              <div className="settings-item">
+                <h3>📍 매장 위치 설정 (인천 서구 가정동)</h3>
+                <p className="description">자동 날씨를 불러올 위치의 위도와 경도입니다.</p>
+                <div className="location-input-group">
+                  <div className="coord-input">
+                    <label>위도(Latitude)</label>
+                    <input
+                      type="number"
+                      value={lat}
+                      onChange={(e) => setLat(Number(e.target.value))}
+                      step="0.001"
+                    />
+                  </div>
+                  <div className="coord-input">
+                    <label>경도(Longitude)</label>
+                    <input
+                      type="number"
+                      value={lng}
+                      onChange={(e) => setLng(Number(e.target.value))}
+                      step="0.001"
+                    />
+                  </div>
+                </div>
+                <p className="help-text" style={{ fontSize: '0.8rem', opacity: 0.7, marginTop: '5px' }}>
+                  💡 인천 서구 가정동 근처로 기본 설정되어 있습니다.
+                </p>
               </div>
 
               <section className="settings-item help">
