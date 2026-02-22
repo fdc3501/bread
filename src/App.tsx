@@ -56,13 +56,16 @@ const App: React.FC = () => {
       const dateStr = d.toISOString().split('T')[0];
       const entry = allHistory.find(h => h.date === dateStr);
       const bData = entry?.breads[breadId];
-      const weather = entry?.weather?.[0]?.weather || undefined;
+      const todayWeatherEntry = entry?.weather?.find(w => w.date === dateStr);
+
       last7Days.push({
         prod: Number(bData?.produceQty) || 0,
         disp: Number(bData?.disposal) || 0,
         rem: Number(bData?.remain) || 0,
         date: dateStr,
-        weather,
+        weather: todayWeatherEntry?.weather || undefined,
+        temp: todayWeatherEntry?.temp,
+        wind: todayWeatherEntry?.wind,
       });
     }
     return last7Days.reverse();
@@ -106,6 +109,22 @@ const App: React.FC = () => {
       });
       text += '\n';
     }
+
+    const todayWeather = sheet.weather.find(w => w.label === '당일');
+    const tomorrowWeather = sheet.weather.find(w => w.label === '다음날');
+
+    if (todayWeather?.weather) {
+      text += `📅 오늘(${todayWeather.date.slice(5)}) 날씨: ${WEATHER_ICONS[todayWeather.weather]}`;
+      if (todayWeather.temp !== undefined) text += ` ${Math.round(todayWeather.temp)}°C`;
+      if (todayWeather.wind !== undefined) text += ` 🌬️${todayWeather.wind.toFixed(1)}m/s`;
+      text += '\n';
+    }
+    if (tomorrowWeather?.weather) {
+      text += `📅 내일(${tomorrowWeather.date.slice(5)}) 예보: ${WEATHER_ICONS[tomorrowWeather.weather]}`;
+      if (tomorrowWeather.temp !== undefined) text += ` ${Math.round(tomorrowWeather.temp)}°C`;
+      text += '\n';
+    }
+    text += '\n';
 
     if (sheet.memo) {
       text += `📝 메모: ${sheet.memo}\n`;
@@ -300,6 +319,14 @@ const App: React.FC = () => {
                   {w.weather ? WEATHER_ICONS[w.weather as Weather] : '❓'}
                 </button>
               </div>
+              <div className="weather-details">
+                {w.temp !== undefined && (
+                  <span className="weather-temp">{Math.round(w.temp)}°C</span>
+                )}
+                {w.wind !== undefined && (
+                  <span className="weather-wind">{w.wind.toFixed(1)}m/s</span>
+                )}
+              </div>
             </div>
           ))}
           <div className="weather-card refresh-card">
@@ -449,7 +476,14 @@ const App: React.FC = () => {
       <div className="print-header only-print">
         <h1>생산 지시서 ({currentDate})</h1>
         <div className="print-weather">
-          날씨: {sheet.weather.find(w => w.label === '당일')?.weather ? WEATHER_ICONS[sheet.weather.find(w => w.label === '당일')!.weather!] : '미기록'}
+          날씨: {(() => {
+            const today = sheet.weather.find(w => w.label === '당일');
+            if (!today?.weather) return '미기록';
+            let weatherStr = WEATHER_ICONS[today.weather];
+            if (today.temp !== undefined) weatherStr += ` ${Math.round(today.temp)}°C`;
+            if (today.wind !== undefined) weatherStr += ` / 풍속 ${today.wind.toFixed(1)}m/s`;
+            return weatherStr;
+          })()}
         </div>
       </div>
     </div >
