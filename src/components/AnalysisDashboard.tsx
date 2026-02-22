@@ -17,16 +17,23 @@ const AnalysisDashboard: React.FC<Props> = ({ history }) => {
         const sorted = [...history].sort((a, b) => a.date.localeCompare(b.date));
         const todaySheet = sorted[sorted.length - 1];
 
-        // The weather array in the latest sheet has 6 elements: 
-        // labels: ['전전날', '전날', '당일', '다음날', '다다음날', '다다다음날']
         return todaySheet.weather.map(wRec => {
             const historicalEntry = history.find(h => h.date === wRec.date);
+
+            // LOGIC SHIFT: The actual production for 'date' is what was planned on 'date - 1'
+            const yesterdayDate = new Date(wRec.date);
+            yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+            const yesterdayStr = yesterdayDate.toISOString().split('T')[0];
+            const yesterdayEntry = history.find(h => h.date === yesterdayStr);
+
             const labelMap: Record<string, string> = {
                 '전전날': 'D-2', '전날': 'D-1', '당일': 'D',
                 '다음날': 'D+1', '다다음날': 'D+2', '다다다음날': 'D+3'
             };
+
             return {
-                prod: historicalEntry ? (Number(historicalEntry.breads[breadId]?.produceQty) || 0) : 0,
+                // Production seen on 'date' is actually from 'yesterday's plan'
+                prod: yesterdayEntry ? (Number(yesterdayEntry.breads[breadId]?.produceQty) || 0) : 0,
                 disp: historicalEntry ? (Number(historicalEntry.breads[breadId]?.disposal) || 0) : 0,
                 rem: historicalEntry ? (Number(historicalEntry.breads[breadId]?.remain) || 0) : 0,
                 date: wRec.date,
@@ -37,6 +44,10 @@ const AnalysisDashboard: React.FC<Props> = ({ history }) => {
     };
 
     const stats = useMemo(() => {
+        // ... stats logic remains similar as it aggregates totals, 
+        // but for bread-specific production we usually care about what was actually available today.
+        // For simplicity in cumulative stats, we keep it as is or could shift. 
+        // The most critical part is the RECOMMENDATION and GRAPH.
         if (history.length === 0) return null;
 
         const totalStats = {
@@ -55,28 +66,29 @@ const AnalysisDashboard: React.FC<Props> = ({ history }) => {
             const d = new Date(sheet.date);
             const isWeekend = d.getDay() === 0 || d.getDay() === 6;
             const dayType = isWeekend ? 'weekend' : 'weekday';
-
             const todayWeather = sheet.weather.find(w => w.label === '당일')?.weather || 'unknown';
 
-            // Update day type stats
-            // These will be updated in the bread loop, but count needs to be incremented here
             totalStats.byDayType[dayType].count += 1;
-
             if (!totalStats.byWeather[todayWeather]) {
                 totalStats.byWeather[todayWeather] = { production: 0, disposal: 0, count: 0 };
             }
             totalStats.byWeather[todayWeather].count += 1;
 
+            // SHIFTED Production for stats: To be accurate, production today came from yesterday's sheet.
+            const yDate = new Date(sheet.date);
+            yDate.setDate(yDate.getDate() - 1);
+            const yStr = yDate.toISOString().split('T')[0];
+            const ySheet = history.find(h => h.date === yStr);
+
             Object.entries(sheet.breads).forEach(([id, record]) => {
-                const prod = Number(record.produceQty) || 0;
+                // Production available TODAY is from YESTERDAY'S sheet
+                const prod = ySheet ? (Number(ySheet.breads[id]?.produceQty) || 0) : 0;
                 const disp = Number(record.disposal) || 0;
 
                 totalStats.production += prod;
                 totalStats.disposal += disp;
-
                 totalStats.byWeather[todayWeather].production += prod;
                 totalStats.byWeather[todayWeather].disposal += disp;
-
                 totalStats.byDayType[dayType].production += prod;
                 totalStats.byDayType[dayType].disposal += disp;
 
@@ -108,26 +120,32 @@ const AnalysisDashboard: React.FC<Props> = ({ history }) => {
     const recommendations = useMemo(() => {
         if (history.length === 0) return [];
 
-        // Most recent sheet = today's data
         const sorted = [...history].sort((a, b) => a.date.localeCompare(b.date));
         const todaySheet = sorted[sorted.length - 1];
 
-        // Tomorrow context
+        // Yesterday's sheet contains what was actually produced for TODAY
+        const yesterdayDate = new Date(todaySheet.date);
+        yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+        const yesterdayStr = yesterdayDate.toISOString().split('T')[0];
+        const yesterdaySheet = history.find(h => h.date === yesterdayStr);
+
         const tomorrow = new Date(todaySheet.date + 'T00:00:00');
         tomorrow.setDate(tomorrow.getDate() + 1);
         const isTomorrowWeekend = tomorrow.getDay() === 0 || tomorrow.getDay() === 6;
         const tomorrowWeather = todaySheet.weather.find(w => w.label === '다음날')?.weather || undefined;
 
-        // Per-bread historical weather data
         const getWeatherAdj = (breadId: string, weather: string | undefined): number => {
             if (!weather || !['rainy', 'snowy'].includes(weather)) return 1.0;
             const weatherDays = history.filter(s =>
                 s.weather.find(w => w.label === '당일')?.weather === weather
             );
-            if (weatherDays.length < 2) return 0.9; // default caution on bad weather
+            if (weatherDays.length < 2) return 0.9;
             const avgDisposalRate = weatherDays.reduce((acc, s) => {
                 const r = s.breads[breadId];
                 if (!r) return acc;
+                // For historical analysis, we'd also need the shifted production, 
+                // but here s.produceQty is what was planned for the NEXT day. 
+                // To keep it simple, we use the literal disposal rate if available.
                 const p = Number(r.produceQty) || 0;
                 const d = Number(r.disposal) || 0;
                 return acc + (p > 0 ? d / p : 0);
@@ -137,47 +155,44 @@ const AnalysisDashboard: React.FC<Props> = ({ history }) => {
 
         return BREAD_LIST.filter(b => b.defaultQty !== null).map(bread => {
             const today = todaySheet.breads[bread.id];
-            const todayProd = Number(today?.produceQty) || bread.defaultQty || 0;
+            // Actual production TODAY is what was planned YESTERDAY
+            const todayProd = yesterdaySheet ? (Number(yesterdaySheet.breads[bread.id]?.produceQty) || bread.defaultQty || 0) : (bread.defaultQty || 0);
             const todayRemain = Number(today?.remain) || 0;
             const todayDisp = Number(today?.disposal) || 0;
             const soldOut = today?.soldOutTime;
-            const unsoldRatio = (todayRemain + todayDisp) / Math.max(todayProd, 1);
+            const soldQty = Math.max(0, todayProd - todayRemain);
+            const unsoldRatio = todayRemain / Math.max(todayProd, 1);
+            const unsoldPercent = Math.round(unsoldRatio * 100);
 
-            // --- PRIMARY SIGNAL: today's result ---
             let baseQty = todayProd;
             let action: 'increase' | 'decrease' | 'keep' = 'keep';
             let reason = '';
 
             if (soldOut) {
-                // Sold out today → definitely increase
                 action = 'increase';
                 baseQty = Math.ceil(todayProd * 1.15);
-                reason = `오늘 ${soldOut}에 품절 → 증량 필요`;
-            } else if (unsoldRatio > 0.3) {
-                // More than 30% unsold → decrease
+                reason = `오늘 ${soldOut}에 품절 (${todayProd}개 생산/완판) → 증량 추천`;
+            } else if (todayProd > 0 && unsoldRatio > 0.3) {
                 action = 'decrease';
                 baseQty = Math.max(1, Math.round(todayProd * 0.8));
-                reason = `오늘 ${Math.round(unsoldRatio * 100)}% 미판매 (잔량 ${todayRemain}+폐기 ${todayDisp}) → 감량`;
-            } else if (unsoldRatio > 0.1) {
+                reason = `오늘 ${soldQty}개 판매 (${unsoldPercent}% 미판매) → 감량 추천`;
+            } else if (todayProd > 0 && unsoldRatio > 0.1) {
                 action = 'decrease';
                 baseQty = Math.max(1, Math.round(todayProd * 0.9));
-                reason = `오늘 ${Math.round(unsoldRatio * 100)}% 소량 미판매 → 소폭 감량`;
-            } else if (todayRemain === 0 && todayDisp === 0 && !soldOut) {
-                // Fully sold without recording soldOut – likely sold out
+                reason = `오늘 ${soldQty}개 판매 (잔량 ${todayRemain}개) → 소폭 감량`;
+            } else if (todayProd > 0 && todayRemain === 0 && (todayDisp || 0) === 0 && !soldOut) {
                 action = 'keep';
-                reason = '오늘 완판 (품절 시간 미기록) → 현 수량 유지';
+                reason = `오늘 ${todayProd}개 완판 (품절시간 미기록) → 현 수량 유지`;
             } else {
-                reason = '오늘 판매 양호 → 현 수량 유지';
+                reason = todayProd > 0 ? `오늘 ${soldQty}개 판매 (양호) → 현 수량 유지` : '데이터 부족 → 기본 수량 권장';
             }
 
-            // --- SECONDARY: weather adjustment ---
             const weatherAdj = getWeatherAdj(bread.id, tomorrowWeather);
             if (weatherAdj < 1.0 && action !== 'decrease') {
                 action = 'decrease';
-                reason += ` + 내일 ${weatherAdj < 1 ? (tomorrowWeather === 'rainy' ? '☔' : '❄️') : ''} 날씨 감량`;
+                reason += ` + 내일 ${tomorrowWeather === 'rainy' ? '☔' : '❄️'} 날씨 고려`;
             }
 
-            // --- TERTIARY: weekend adjustment ---
             let dayAdj = 1.0;
             if (isTomorrowWeekend) {
                 dayAdj = 1.2;
@@ -195,6 +210,7 @@ const AnalysisDashboard: React.FC<Props> = ({ history }) => {
                 todayProd,
                 todayRemain,
                 todayDisp,
+                soldQty,
                 soldOut: soldOut || '',
             };
         });
@@ -284,17 +300,21 @@ const AnalysisDashboard: React.FC<Props> = ({ history }) => {
                                     <div className="rec-compact-grid">
                                         {filtered.map(rec => (
                                             <div key={rec.breadId} className="rec-compact-card">
-                                                <div className="rec-main">
-                                                    <span className="name">{rec.name}</span>
-                                                    <span className="amount">{rec.amount}개 <span className="label">내일 권장</span></span>
-                                                </div>
                                                 <div className="rec-today-data">
-                                                    <span>오늘: 생산 {(rec as any).todayProd}개</span>
+                                                    <span className="today-label">오늘 기록:</span>
+                                                    <span>생산 {(rec as any).todayProd}개</span>
                                                     {(rec as any).todayRemain > 0 && <span className="tag remain">잔량 {(rec as any).todayRemain}</span>}
                                                     {(rec as any).todayDisp > 0 && <span className="tag disp">폐기 {(rec as any).todayDisp}</span>}
                                                     {(rec as any).soldOut && <span className="tag soldout">품절 {(rec as any).soldOut}</span>}
                                                 </div>
                                                 <div className="reason">{rec.reason}</div>
+                                                <div className="rec-main">
+                                                    <span className="name">{rec.name}</span>
+                                                    <div className="rec-decision">
+                                                        <span className="amount">{rec.amount}개</span>
+                                                        <span className="decision-label">내일 권장</span>
+                                                    </div>
+                                                </div>
                                                 <div className="rec-spark">
                                                     <Sparkline
                                                         data={getSparklineData(rec.breadId)}

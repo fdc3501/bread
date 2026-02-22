@@ -93,7 +93,7 @@ const App: React.FC = () => {
               <th>폐기</th>
               <th className="no-print">추세(7일)</th>
               <th>생산</th>
-              <th>생산수량</th>
+              <th>내일 생산수량 결정</th>
               <th>품절시간</th>
             </tr>
           </thead>
