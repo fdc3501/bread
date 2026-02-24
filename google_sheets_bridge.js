@@ -23,6 +23,19 @@ function doPost(e) {
         }
 
         if (rowToUpdate != -1) {
+            // 이미 최종확정(finalized)된 데이터를 미확정(draft) 데이터로 덮어쓰는 것을 방지
+            // (아르바이트 재저장 등이 사장의 확정 내역을 지우는 사고 예방)
+            try {
+                var existingData = JSON.parse(values[rowToUpdate - 1][1] || '{}');
+                if (existingData.status === 'finalized' && data.status !== 'finalized') {
+                    return ContentService.createTextOutput(JSON.stringify({
+                        result: "error",
+                        message: "이미 최종확정된 데이터입니다. 미확정 상태로 덮어쓸 수 없습니다."
+                    })).setMimeType(ContentService.MimeType.JSON);
+                }
+            } catch (parseErr) {
+                // 기존 데이터 파싱 실패 시 그냥 진행
+            }
             sheet.getRange(rowToUpdate, 1, 1, 2).setValues([[date, JSON.stringify(data)]]);
         } else {
             sheet.appendRow([date, JSON.stringify(data)]);

@@ -104,23 +104,27 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
             setIsSyncing(true);
             setSyncMessage('구글 시트 업로드 중...');
             try {
-                // Use no-cors for broadest compatibility with GAS POST redirects
-                // Note: we won't know the exact response body, but the request will reach GAS.
-                await fetch(trimmedUrl, {
+                const response = await fetch(trimmedUrl, {
                     method: 'POST',
-                    mode: 'no-cors',
                     cache: 'no-cache',
-                    headers: {
-                        'Content-Type': 'text/plain'
-                    },
+                    headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify(sheetToSave)
                 });
 
-                setSyncMessage('구글 시트 동기화 완료');
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.result === 'success') {
+                        setSyncMessage('구글 시트 동기화 완료 ✅');
+                    } else {
+                        setSyncMessage(`⚠️ 동기화 오류: ${result.message || '알 수 없는 오류'}`);
+                    }
+                } else {
+                    setSyncMessage(`⚠️ 구글 시트 오류 (${response.status})`);
+                }
                 setTimeout(() => setSyncMessage(null), 3000);
             } catch (e) {
                 console.error('Sync failed', e);
-                setSyncMessage('동기화 실패 (네트워크 확인)');
+                setSyncMessage('⚠️ 동기화 실패 (네트워크 확인)');
                 setTimeout(() => setSyncMessage(null), 5000);
             } finally {
                 setIsSyncing(false);
@@ -168,8 +172,9 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
     };
 
     const loadDate = async (date: string) => {
-        const localSaved = localStorage.getItem(`${STORAGE_KEY}_${date}`);
-        let currentSheet: DailySheet | null = localSaved ? JSON.parse(localSaved) : null;
+        const localSavedRaw = localStorage.getItem(`${STORAGE_KEY}_${date}`);
+        const localSheet: DailySheet | null = localSavedRaw ? JSON.parse(localSavedRaw) : null;
+        let currentSheet: DailySheet | null = localSheet;
         const trimmedUrl = syncUrl?.trim();
 
         if (trimmedUrl) {
@@ -181,13 +186,23 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
                 if (response.ok) {
                     const remoteData = await response.json();
                     if (remoteData && remoteData.date === date) {
-                        currentSheet = {
+                        const remoteSheet: DailySheet = {
                             ...remoteData,
                             status: remoteData.status || 'draft'
                         };
-                        localStorage.setItem(`${STORAGE_KEY}_${date}`, JSON.stringify(currentSheet));
-                        setSavedAt(new Date());
-                        setSyncMessage('동기화 성공 ✅');
+
+                        // 우선순위: 로컬 최종확정 > 원격 미확정
+                        // 사장이 확정한 데이터를 아르바이트의 재저장이나 새로고침으로 덮어쓰지 않도록 보호
+                        if (localSheet?.status === 'finalized' && remoteSheet.status !== 'finalized') {
+                            setSyncMessage('로컬 최종확정 데이터 유지 (원격: 미확정)');
+                            // currentSheet는 localSheet 유지 (덮어쓰지 않음)
+                        } else {
+                            // 원격이 최종확정이거나, 둘 다 미확정이면 원격 우선
+                            currentSheet = remoteSheet;
+                            localStorage.setItem(`${STORAGE_KEY}_${date}`, JSON.stringify(currentSheet));
+                            setSavedAt(new Date());
+                            setSyncMessage('동기화 성공 ✅');
+                        }
                     } else if (remoteData && remoteData.result === 'not_found') {
                         setSyncMessage('시트에 데이터 없음');
                     }
@@ -366,11 +381,15 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
         setIsSyncing(true);
         setSyncMessage('연결 테스트 중...');
         try {
-            // Use no-cors for GAS to avoid false failures on redirects
-            await fetch(`${syncUrl.trim()}?test=1`, { mode: 'no-cors', cache: 'no-cache' });
-            alert('연결 성공! 이제 구글 시트가 수신을 기다리고 있습니다.');
+            // date=test 로 조회 → not_found 또는 error 응답이 오면 서버 연결 성공
+            const response = await fetch(`${syncUrl.trim()}?date=test&t=${Date.now()}`, { cache: 'no-cache' });
+            if (response.ok) {
+                alert('연결 성공! 구글 시트 서버와 통신됩니다.');
+            } else {
+                alert(`연결 실패: 서버 오류 (${response.status})`);
+            }
         } catch (e) {
-            alert('연결 실패: 주소가 잘못되었거나 네트워크가 차단되었습니다.');
+            alert('연결 실패: 주소가 잘못되었거나 네트워크/CORS가 차단되었습니다.');
         } finally {
             setIsSyncing(false);
             setSyncMessage(null);
@@ -380,7 +399,19 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
     const finalizeSheet = async () => {
         if (!confirm('현재 생산 계획을 최종 확정하시겠습니까? 확정 후에는 기사님이 확인하게 됩니다.')) return;
 
-        const finalizedSheet: DailySheet = { ...sheet, status: 'finalized' };
+        // saveSheet와 동일하게 빈 문자열 → 0 정규화
+        const sanitizedBreads = { ...sheet.breads };
+        Object.keys(sanitizedBreads).forEach(id => {
+            const rec = sanitizedBreads[id];
+            sanitizedBreads[id] = {
+                ...rec,
+                remain: rec.remain === '' ? 0 : Number(rec.remain),
+                disposal: rec.disposal === '' ? 0 : Number(rec.disposal),
+                produceQty: rec.produceQty === '' ? 0 : Number(rec.produceQty),
+            };
+        });
+
+        const finalizedSheet: DailySheet = { ...sheet, breads: sanitizedBreads, status: 'finalized' };
         setSheet(finalizedSheet);
 
         // Immediate save & sync
@@ -392,18 +423,27 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
             setIsSyncing(true);
             setSyncMessage('최종 확정 업로드 중...');
             try {
-                await fetch(syncUrl.trim(), {
+                const response = await fetch(syncUrl.trim(), {
                     method: 'POST',
-                    mode: 'no-cors',
                     cache: 'no-cache',
                     headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify(finalizedSheet)
                 });
-                setSyncMessage('최종 확정 완료 🔒');
+
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.result === 'success') {
+                        setSyncMessage('최종 확정 완료 🔒');
+                    } else {
+                        setSyncMessage(`⚠️ 확정 업로드 오류: ${result.message || '알 수 없는 오류'}`);
+                    }
+                } else {
+                    setSyncMessage(`⚠️ 확정 업로드 실패 (${response.status})`);
+                }
                 setTimeout(() => setSyncMessage(null), 3000);
             } catch (e) {
                 console.error('Finalize sync failed', e);
-                setSyncMessage('확정 업로드 실패 (네트워크 확인)');
+                setSyncMessage('⚠️ 확정 업로드 실패 (네트워크 확인)');
             } finally {
                 setIsSyncing(false);
             }
