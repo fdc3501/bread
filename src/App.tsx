@@ -28,6 +28,8 @@ const App: React.FC = () => {
   const [lat, setLat] = useState(() => Number(localStorage.getItem('latitude')) || 37.526);
   const [lng, setLng] = useState(() => Number(localStorage.getItem('longitude')) || 126.674);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const composingRef = React.useRef(false);
   const [sortMode, setSortMode] = useState<'original' | 'abc'>('original');
   const [isAddingBread, setIsAddingBread] = useState(false);
   const [newBread, setNewBread] = useState<{ name: string, group: 'A' | 'B', defaultQty: string | number }>({ name: '', group: 'A', defaultQty: '' });
@@ -155,17 +157,23 @@ const App: React.FC = () => {
     setIsAddingBread(false);
   };
 
+  const tomorrowLabel = useMemo(() => {
+    const d = new Date(currentDate + 'T00:00:00');
+    d.setDate(d.getDate() + 1);
+    return `${d.getMonth() + 1}/${d.getDate()}`;
+  }, [currentDate]);
+
   const renderTable = (group: 'A' | 'B') => {
     const rawItems = masterBreadList.filter(item => item.group === group);
 
-    // 1. Filter by search term
-    const itemsWithSearch = rawItems
-      .filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    // 가나다 정렬 (검색 필터와 독립적으로 순서만 결정)
+    const sortedItems = sortMode === 'abc'
+      ? [...rawItems].sort((a, b) => a.name.localeCompare(b.name, 'ko-KR'))
+      : rawItems;
 
-    // 2. Conditionally sort by name (가나다 순)
-    const items = sortMode === 'abc'
-      ? [...itemsWithSearch].sort((a, b) => a.name.localeCompare(b.name, 'ko-KR'))
-      : itemsWithSearch;
+    // 검색어 매칭 여부 (DOM에서 제거하지 않고 숨겨서 레이아웃 변동 방지)
+    const matchSearch = (name: string) =>
+      !searchTerm || name.includes(searchTerm);
 
     const hours = Array.from({ length: 16 }, (_, i) => i + 7); // 07:00 ~ 22:00
 
@@ -179,17 +187,18 @@ const App: React.FC = () => {
               <th title="기부와 묶음빵">폐기(기부/묶음빵)</th>
               <th className="no-print">추세(7일)</th>
               <th>생산</th>
-              <th>내일 생산수량 결정</th>
+              <th>내일({tomorrowLabel}) 생산수량</th>
               <th>품절시간</th>
             </tr>
           </thead>
           <tbody>
-            {items.map(item => {
+            {sortedItems.map(item => {
               const record = sheet.breads[item.id];
               const isQuantityDisabled = item.defaultQty === null;
+              const hidden = !matchSearch(item.name);
 
               return (
-                <tr key={item.id} className={!record.produce ? 'disabled-row' : ''}>
+                <tr key={item.id} className={!record.produce ? 'disabled-row' : ''} style={hidden ? { display: 'none' } : undefined}>
                   <td className="name-cell">
                     <div className="bread-name">{item.name}</div>
                     {item.note && <div className="bread-note">{item.note}</div>}
@@ -390,12 +399,21 @@ const App: React.FC = () => {
                 <span className="search-icon">🔍</span>
                 <input
                   type="text"
+                  lang="ko"
                   placeholder="빵 이름을 검색하세요..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  value={searchInput}
+                  onChange={(e) => {
+                    setSearchInput(e.target.value);
+                    if (!composingRef.current) setSearchTerm(e.target.value);
+                  }}
+                  onCompositionStart={() => { composingRef.current = true; }}
+                  onCompositionEnd={(e) => {
+                    composingRef.current = false;
+                    setSearchTerm(e.currentTarget.value);
+                  }}
                 />
-                {searchTerm && (
-                  <button className="clear-search" onClick={() => setSearchTerm('')}>✕</button>
+                {searchInput && (
+                  <button className="clear-search" onClick={() => { setSearchInput(''); setSearchTerm(''); }}>✕</button>
                 )}
               </div>
               <div className="filter-group">

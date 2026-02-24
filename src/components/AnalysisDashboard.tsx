@@ -148,16 +148,20 @@ const AnalysisDashboard: React.FC<Props> = ({ history, todayDate }) => {
                 s.weather.find(w => w.label === '당일')?.weather === weather
             );
             if (weatherDays.length < 2) return 0.9;
+            let validDays = 0;
             const avgDisposalRate = weatherDays.reduce((acc, s) => {
                 const r = s.breads[breadId];
                 if (!r) return acc;
-                // For historical analysis, we'd also need the shifted production, 
-                // but here s.produceQty is what was planned for the NEXT day. 
-                // To keep it simple, we use the literal disposal rate if available.
-                const p = Number(r.produceQty) || 0;
+                // 당일 실제 생산량 = 전날 시트의 produceQty (날짜 시프트 적용)
+                const prevDate = new Date(s.date + 'T00:00:00');
+                prevDate.setDate(prevDate.getDate() - 1);
+                const prevStr = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}-${String(prevDate.getDate()).padStart(2, '0')}`;
+                const prevSheet = history.find(h => h.date === prevStr);
+                const p = prevSheet ? (Number(prevSheet.breads[breadId]?.produceQty) || 0) : 0;
                 const d = Number(r.disposal) || 0;
-                return acc + (p > 0 ? d / p : 0);
-            }, 0) / weatherDays.length;
+                if (p > 0) { validDays++; return acc + d / p; }
+                return acc;
+            }, 0) / Math.max(validDays, 1);
             return avgDisposalRate > 0.15 ? 0.85 : 1.0;
         };
 
@@ -234,13 +238,26 @@ const AnalysisDashboard: React.FC<Props> = ({ history, todayDate }) => {
                 </div>
             )}
             <div className="summary-cards">
+                {(() => {
+                    const sorted = [...history].sort((a, b) => a.date.localeCompare(b.date));
+                    const first = sorted[0]?.date;
+                    const last = sorted[sorted.length - 1]?.date;
+                    const fmt = (d: string) => { const [,m,day] = d.split('-'); return `${Number(m)}/${Number(day)}`; };
+                    const periodLabel = first && last ? (first === last ? fmt(first) : `${fmt(first)} ~ ${fmt(last)}`) : '';
+                    return (
+                        <div className="stat-period-label">
+                            📅 분석 기간: {periodLabel} ({history.length}일)
+                            {history.length < 3 && <span style={{ color: '#e57373', marginLeft: 8 }}>※ 데이터 부족 — 추천 정확도 낮음</span>}
+                        </div>
+                    );
+                })()}
                 <div className="stat-card">
-                    <label>누적 총 생산</label>
-                    <div className="value">{stats.production}건</div>
+                    <label>기간 총 생산</label>
+                    <div className="value">{stats.production}개</div>
                 </div>
                 <div className="stat-card warning">
-                    <label>누적 총 폐기</label>
-                    <div className="value">{stats.disposal}건</div>
+                    <label>기간 총 폐기</label>
+                    <div className="value">{stats.disposal}개</div>
                 </div>
                 <div className="stat-card">
                     <label>평균 폐기율</label>
