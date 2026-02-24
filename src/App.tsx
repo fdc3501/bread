@@ -602,7 +602,7 @@ const App: React.FC = () => {
                   </button>
                 </div>
                 <p className="help-text" style={{ fontSize: '0.8rem', opacity: 0.7, marginTop: '8px' }}>
-                  ⚠️ 삭제 후 복구할 수 없습니다. 이 기기의 저장 데이터만 삭제됩니다.
+                  ⚠️ 삭제 후 복구할 수 없습니다. 이 기기 + 구글 시트에서 모두 삭제됩니다.
                 </p>
               </div>
 

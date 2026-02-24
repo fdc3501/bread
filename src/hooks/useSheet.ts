@@ -535,17 +535,53 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
         localStorage.setItem(BREAD_LIST_KEY, JSON.stringify(newList));
     };
 
-    // 특정 날짜 데이터 삭제 (로컬만 삭제, 구글 시트는 건드리지 않음)
-    const deleteSheetDate = (targetDate: string) => {
+    // 특정 날짜 데이터 삭제 (로컬 + 구글 시트 동시 삭제)
+    const deleteSheetDate = async (targetDate: string) => {
         const key = `${STORAGE_KEY}_${targetDate}`;
-        if (!localStorage.getItem(key)) {
+        const hasLocal = !!localStorage.getItem(key);
+        const trimmedUrl = syncUrl?.trim();
+
+        if (!hasLocal && !trimmedUrl) {
             alert(`❌ ${targetDate} 데이터가 없습니다.`);
             return;
         }
-        const ok = confirm(`🗑️ ${targetDate} 데이터를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`);
+
+        const ok = confirm(`🗑️ ${targetDate} 데이터를 삭제하시겠습니까?\n- 이 기기 저장 데이터\n- 구글 시트 데이터\n\n이 작업은 되돌릴 수 없습니다.`);
         if (!ok) return;
-        localStorage.removeItem(key);
-        alert(`✅ ${targetDate} 데이터가 삭제되었습니다.`);
+
+        // 로컬 삭제
+        if (hasLocal) localStorage.removeItem(key);
+
+        // 구글 시트 삭제
+        if (trimmedUrl) {
+            setIsSyncing(true);
+            setSyncMessage('구글 시트에서 삭제 중...');
+            try {
+                const response = await fetch(trimmedUrl, {
+                    method: 'POST',
+                    cache: 'no-cache',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({ date: targetDate, status: 'deleted' })
+                });
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.result === 'success') {
+                        alert(`✅ ${targetDate} 데이터 삭제 완료!\n(이 기기 + 구글 시트 모두 삭제됨)`);
+                    } else {
+                        alert(`✅ 이 기기에서 삭제 완료\n⚠️ 구글 시트 오류: ${result.message}`);
+                    }
+                } else {
+                    alert(`✅ 이 기기에서 삭제 완료\n⚠️ 구글 시트 응답 오류 (${response.status})`);
+                }
+            } catch (e) {
+                alert(`✅ 이 기기에서 삭제 완료\n⚠️ 구글 시트 연결 실패 (나중에 확인 필요)`);
+            } finally {
+                setIsSyncing(false);
+                setSyncMessage(null);
+            }
+        } else {
+            alert(`✅ ${targetDate} 데이터가 이 기기에서 삭제되었습니다.\n(구글 시트 URL 미설정)`);
+        }
     };
 
     // 날짜 데이터 이동: fromDate의 로컬 데이터를 toDate로 옮기고 구글 시트에도 반영

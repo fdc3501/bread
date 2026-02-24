@@ -22,6 +22,14 @@ function doPost(e) {
             }
         }
 
+        // status가 'deleted'이면 해당 행을 삭제
+        if (data.status === 'deleted') {
+            if (rowToUpdate !== -1) {
+                sheet.deleteRow(rowToUpdate);
+            }
+            return ContentService.createTextOutput(JSON.stringify({ result: "success", message: "삭제됨" })).setMimeType(ContentService.MimeType.JSON);
+        }
+
         if (rowToUpdate != -1) {
             // 이미 최종확정(finalized)된 데이터를 미확정(draft) 데이터로 덮어쓰는 것을 방지
             // (아르바이트 재저장 등이 사장의 확정 내역을 지우는 사고 예방)
