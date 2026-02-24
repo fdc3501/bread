@@ -36,11 +36,12 @@ const App: React.FC = () => {
     sheet, masterBreadList, savedAt, isDirty, isSyncing, syncMessage,
     saveSheet, updateWeather, updateBreadRecord, updateMemo, loadDate,
     getAllHistory, generateDummyData, clearDemoData, testSync, finalizeSheet,
-    refreshWeather, addBreadItem, deleteBreadItem, moveSheetDate
+    refreshWeather, addBreadItem, deleteBreadItem, moveSheetDate, deleteSheetDate
   } = useSheet(currentDate, syncUrl);
 
   const [moveFrom, setMoveFrom] = React.useState('');
   const [moveTo, setMoveTo] = React.useState('');
+  const [deleteTarget, setDeleteTarget] = React.useState('');
 
   const allHistory = useMemo(() => {
     const rawHistory = getAllHistory();
@@ -578,6 +579,30 @@ const App: React.FC = () => {
                 </div>
                 <p className="help-text" style={{ fontSize: '0.8rem', opacity: 0.7, marginTop: '8px' }}>
                   💡 이동 후 구글 시트에도 자동 반영됩니다.
+                </p>
+              </div>
+
+              <div className="settings-item">
+                <h3>🗑️ 날짜 데이터 삭제</h3>
+                <p className="description">잘못 저장된 날짜의 데이터를 삭제합니다.</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <label style={{ fontSize: '0.9rem' }}>삭제할 날짜</label>
+                    <input type="date" value={deleteTarget} onChange={e => setDeleteTarget(e.target.value)} />
+                  </div>
+                  <button
+                    style={{ padding: '10px 16px', background: '#e53935', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.9rem' }}
+                    disabled={!deleteTarget}
+                    onClick={() => {
+                      deleteSheetDate(deleteTarget);
+                      setDeleteTarget('');
+                    }}
+                  >
+                    🗑️ 삭제하기
+                  </button>
+                </div>
+                <p className="help-text" style={{ fontSize: '0.8rem', opacity: 0.7, marginTop: '8px' }}>
+                  ⚠️ 삭제 후 복구할 수 없습니다. 이 기기의 저장 데이터만 삭제됩니다.
                 </p>
               </div>
 

@@ -535,6 +535,19 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
         localStorage.setItem(BREAD_LIST_KEY, JSON.stringify(newList));
     };
 
+    // 특정 날짜 데이터 삭제 (로컬만 삭제, 구글 시트는 건드리지 않음)
+    const deleteSheetDate = (targetDate: string) => {
+        const key = `${STORAGE_KEY}_${targetDate}`;
+        if (!localStorage.getItem(key)) {
+            alert(`❌ ${targetDate} 데이터가 없습니다.`);
+            return;
+        }
+        const ok = confirm(`🗑️ ${targetDate} 데이터를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`);
+        if (!ok) return;
+        localStorage.removeItem(key);
+        alert(`✅ ${targetDate} 데이터가 삭제되었습니다.`);
+    };
+
     // 날짜 데이터 이동: fromDate의 로컬 데이터를 toDate로 옮기고 구글 시트에도 반영
     const moveSheetDate = async (fromDate: string, toDate: string) => {
         const fromKey = `${STORAGE_KEY}_${fromDate}`;
@@ -618,6 +631,7 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
         refreshWeather,
         addBreadItem,
         deleteBreadItem,
-        moveSheetDate
+        moveSheetDate,
+        deleteSheetDate
     };
 };
