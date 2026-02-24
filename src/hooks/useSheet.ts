@@ -228,7 +228,8 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
             if (!todayWeather) {
                 const lat = Number(localStorage.getItem('latitude')) || 37.526;
                 const lng = Number(localStorage.getItem('longitude')) || 126.674;
-                refreshWeather(lat, lng);
+                // currentSheet를 명시적으로 전달하여 stale closure 방지
+                refreshWeather(lat, lng, currentSheet);
             }
         } else {
             // Auto-prefill from yesterday's data
@@ -278,8 +279,8 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
             // AUTO-UPDATE WEATHER for new sheet
             const lat = Number(localStorage.getItem('latitude')) || 37.526;
             const lng = Number(localStorage.getItem('longitude')) || 126.674;
-            // Delay slightly to ensure state is settled
-            setTimeout(() => refreshWeather(lat, lng), 500);
+            // newSheet를 명시적으로 전달하여 stale closure 방지 (setTimeout도 클로저 캡처 문제 있음)
+            setTimeout(() => refreshWeather(lat, lng, newSheet), 100);
         }
     };
 
@@ -450,12 +451,16 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
         }
     };
 
-    const refreshWeather = async (lat: number, lng: number) => {
+    // baseSheet: loadDate에서 날짜 전환 중 호출될 때 stale closure 방지를 위해 명시적으로 전달
+    const refreshWeather = async (lat: number, lng: number, baseSheet?: DailySheet) => {
         setIsSyncing(true);
         setSyncMessage('날씨 정보 가져오는 중...');
         try {
-            const startDate = sheet.weather[0].date;
-            const endDate = sheet.weather[5].date;
+            // baseSheet가 있으면 그것을 우선 사용 (loadDate 전환 시 stale closure 방지)
+            // 없으면 현재 sheet 사용 (버튼 클릭 등 사용자가 직접 호출 시)
+            const targetSheet = baseSheet || sheet;
+            const startDate = targetSheet.weather[0].date;
+            const endDate = targetSheet.weather[5].date;
 
             // Use weather_code, temperature_2m_max, and wind_speed_10m_max
             const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=weather_code,temperature_2m_max,wind_speed_10m_max&timezone=Asia%2FSeoul&start_date=${startDate}&end_date=${endDate}`;
@@ -469,7 +474,7 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
                     const apiTemps = data.daily.temperature_2m_max as number[];
                     const apiWinds = data.daily.wind_speed_10m_max as number[];
 
-                    const newWeather = sheet.weather.map(w => {
+                    const newWeather = targetSheet.weather.map(w => {
                         const idx = apiDates.indexOf(w.date);
                         if (idx !== -1) {
                             return {
@@ -482,7 +487,9 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
                         return w;
                     });
 
-                    setSheet({ ...sheet, weather: newWeather });
+                    // 함수형 업데이트 사용: prev(최신 상태)의 date/breads는 유지하고 weather만 교체
+                    // stale closure로 인해 sheet.date가 이전 날짜를 가리켜도 안전
+                    setSheet(prev => ({ ...prev, weather: newWeather }));
                     setIsDirty(true);
                     setSyncMessage('날씨 업데이트 완료 🌤️');
                 } else {

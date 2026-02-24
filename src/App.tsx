@@ -14,7 +14,15 @@ const WEATHER_ICONS: Record<Weather, string> = {
 };
 
 const App: React.FC = () => {
-  const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [currentDate, setCurrentDate] = useState(() => {
+    // toISOString()은 UTC 기준이라 새벽 5~7시(KST)에 열면 전날 날짜가 됨
+    // 로컬 시간 기준으로 날짜를 구해야 한국 새벽 시간대에도 정확함
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  });
   const [activeTab, setActiveTab] = useState<'edit' | 'analyze' | 'demo' | 'settings'>('edit');
   const [syncUrl, setSyncUrl] = useState(() => localStorage.getItem('google_sheets_url') || '');
   const [lat, setLat] = useState(() => Number(localStorage.getItem('latitude')) || 37.526);
