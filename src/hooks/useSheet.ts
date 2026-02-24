@@ -535,6 +535,69 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
         localStorage.setItem(BREAD_LIST_KEY, JSON.stringify(newList));
     };
 
+    // 날짜 데이터 이동: fromDate의 로컬 데이터를 toDate로 옮기고 구글 시트에도 반영
+    const moveSheetDate = async (fromDate: string, toDate: string) => {
+        const fromKey = `${STORAGE_KEY}_${fromDate}`;
+        const toKey = `${STORAGE_KEY}_${toDate}`;
+
+        const raw = localStorage.getItem(fromKey);
+        if (!raw) {
+            alert(`❌ ${fromDate} 데이터가 없습니다.`);
+            return;
+        }
+
+        const existing = localStorage.getItem(toKey);
+        if (existing) {
+            const ok = confirm(`⚠️ ${toDate}에 이미 데이터가 있습니다.\n덮어쓰시겠습니까?`);
+            if (!ok) return;
+        }
+
+        // date 필드를 toDate로 수정
+        const data: DailySheet = JSON.parse(raw);
+        const corrected: DailySheet = { ...data, date: toDate };
+
+        // localStorage 이동
+        localStorage.setItem(toKey, JSON.stringify(corrected));
+        localStorage.removeItem(fromKey);
+
+        // 현재 보고 있는 날짜 갱신
+        setSheet(corrected);
+        setSavedAt(new Date());
+        setIsDirty(false);
+
+        // 구글 시트 동기화
+        const trimmedUrl = syncUrl?.trim();
+        if (trimmedUrl) {
+            setIsSyncing(true);
+            setSyncMessage('구글 시트 업로드 중...');
+            try {
+                const response = await fetch(trimmedUrl, {
+                    method: 'POST',
+                    cache: 'no-cache',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify(corrected)
+                });
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.result === 'success') {
+                        alert(`✅ 완료!\n${fromDate} → ${toDate} 이동 성공\n구글 시트 반영 완료`);
+                    } else {
+                        alert(`✅ 날짜 이동 완료\n⚠️ 구글 시트 오류: ${result.message}`);
+                    }
+                } else {
+                    alert(`✅ 날짜 이동 완료\n⚠️ 구글 시트 응답 오류 (${response.status})`);
+                }
+            } catch (e) {
+                alert(`✅ 날짜 이동 완료\n⚠️ 구글 시트 연결 실패`);
+            } finally {
+                setIsSyncing(false);
+                setSyncMessage(null);
+            }
+        } else {
+            alert(`✅ 날짜 이동 완료 (${fromDate} → ${toDate})\n구글 시트 URL이 없어 로컬만 반영됨`);
+        }
+    };
+
     return {
         sheet,
         masterBreadList, // Return the master list
@@ -554,6 +617,7 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
         finalizeSheet,
         refreshWeather,
         addBreadItem,
-        deleteBreadItem
+        deleteBreadItem,
+        moveSheetDate
     };
 };

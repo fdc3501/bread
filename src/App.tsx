@@ -36,8 +36,11 @@ const App: React.FC = () => {
     sheet, masterBreadList, savedAt, isDirty, isSyncing, syncMessage,
     saveSheet, updateWeather, updateBreadRecord, updateMemo, loadDate,
     getAllHistory, generateDummyData, clearDemoData, testSync, finalizeSheet,
-    refreshWeather, addBreadItem, deleteBreadItem
+    refreshWeather, addBreadItem, deleteBreadItem, moveSheetDate
   } = useSheet(currentDate, syncUrl);
+
+  const [moveFrom, setMoveFrom] = React.useState('');
+  const [moveTo, setMoveTo] = React.useState('');
 
   const allHistory = useMemo(() => {
     const rawHistory = getAllHistory();
@@ -542,6 +545,39 @@ const App: React.FC = () => {
                 </div>
                 <p className="help-text" style={{ fontSize: '0.8rem', opacity: 0.7, marginTop: '5px' }}>
                   💡 인천 서구 가정동 근처로 기본 설정되어 있습니다.
+                </p>
+              </div>
+
+              <div className="settings-item">
+                <h3>📦 날짜 데이터 이동</h3>
+                <p className="description">잘못된 날짜에 저장된 데이터를 올바른 날짜로 옮깁니다.</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <label style={{ fontSize: '0.9rem' }}>이동할 날짜</label>
+                    <input type="date" value={moveFrom} onChange={e => setMoveFrom(e.target.value)} />
+                  </div>
+                  <span style={{ fontSize: '1.2rem' }}>→</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <label style={{ fontSize: '0.9rem' }}>옮길 날짜</label>
+                    <input type="date" value={moveTo} onChange={e => setMoveTo(e.target.value)} />
+                  </div>
+                  <button
+                    className="save-btn"
+                    style={{ padding: '10px 16px' }}
+                    disabled={!moveFrom || !moveTo || moveFrom === moveTo}
+                    onClick={() => {
+                      if (!moveFrom || !moveTo) return;
+                      moveSheetDate(moveFrom, moveTo).then(() => {
+                        setCurrentDate(moveTo);
+                        loadDate(moveTo);
+                      });
+                    }}
+                  >
+                    📦 이동하기
+                  </button>
+                </div>
+                <p className="help-text" style={{ fontSize: '0.8rem', opacity: 0.7, marginTop: '8px' }}>
+                  💡 이동 후 구글 시트에도 자동 반영됩니다.
                 </p>
               </div>
 
