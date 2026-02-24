@@ -1,49 +1,75 @@
 function doPost(e) {
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0]; // 첫 번째 시트를 명시적으로 사용
-    var data = JSON.parse(e.postData.contents);
-    var date = data.date; // "YYYY-MM-DD"
+    try {
+        var ss = SpreadsheetApp.getActiveSpreadsheet();
+        var sheet = ss.getSheets()[0];
+        var data = JSON.parse(e.postData.contents);
+        var date = data.date;
 
-    if (sheet.getLastRow() === 0) {
-        sheet.appendRow(["날짜", "데이터 내용(JSON)"]);
-    }
+        if (!date) throw new Error("데이터에 날짜(date) 항목이 없습니다.");
 
-    var values = sheet.getDataRange().getValues();
-    var rowToUpdate = -1;
-    var targetNumeric = date.replace(/[^0-9]/g, ""); // "20260222"
-
-    for (var i = 1; i < values.length; i++) {
-        if (getNumericDate(values[i][0]) === targetNumeric) {
-            rowToUpdate = i + 1;
-            break;
+        if (sheet.getLastRow() === 0) {
+            sheet.appendRow(["날짜", "데이터 내용(JSON)"]);
         }
-    }
 
-    if (rowToUpdate != -1) {
-        sheet.getRange(rowToUpdate, 1, 1, 2).setValues([[date, JSON.stringify(data)]]);
-    } else {
-        sheet.appendRow([date, JSON.stringify(data)]);
-    }
+        var values = sheet.getDataRange().getValues();
+        var targetNumeric = getNumericDate(date);
+        var rowToUpdate = -1;
 
-    return ContentService.createTextOutput(JSON.stringify({ result: "success" })).setMimeType(ContentService.MimeType.JSON);
+        for (var i = 1; i < values.length; i++) {
+            if (getNumericDate(values[i][0]) === targetNumeric) {
+                rowToUpdate = i + 1;
+                break;
+            }
+        }
+
+        if (rowToUpdate != -1) {
+            sheet.getRange(rowToUpdate, 1, 1, 2).setValues([[date, JSON.stringify(data)]]);
+        } else {
+            sheet.appendRow([date, JSON.stringify(data)]);
+        }
+
+        return ContentService.createTextOutput(JSON.stringify({ result: "success" })).setMimeType(ContentService.MimeType.JSON);
+    } catch (err) {
+        logError("doPost", err, e ? e.postData.contents : "no data");
+        return ContentService.createTextOutput(JSON.stringify({ result: "error", message: err.message })).setMimeType(ContentService.MimeType.JSON);
+    }
 }
 
 function doGet(e) {
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
-    var date = e.parameter.date;
-    var targetNumeric = date.replace(/[^0-9]/g, "");
+    try {
+        var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+        var date = e.parameter.date;
+        if (!date) return ContentService.createTextOutput(JSON.stringify({ result: "error", message: "Date parameter missing" })).setMimeType(ContentService.MimeType.JSON);
 
-    if (sheet.getLastRow() === 0) {
-        return ContentService.createTextOutput(JSON.stringify({ result: "not_found" })).setMimeType(ContentService.MimeType.JSON);
-    }
+        var targetNumeric = getNumericDate(date);
 
-    var values = sheet.getDataRange().getValues();
-    for (var i = 1; i < values.length; i++) {
-        if (getNumericDate(values[i][0]) === targetNumeric) {
-            return ContentService.createTextOutput(values[i][1]).setMimeType(ContentService.MimeType.JSON);
+        if (sheet.getLastRow() === 0) {
+            return ContentService.createTextOutput(JSON.stringify({ result: "not_found" })).setMimeType(ContentService.MimeType.JSON);
         }
-    }
 
-    return ContentService.createTextOutput(JSON.stringify({ result: "not_found" })).setMimeType(ContentService.MimeType.JSON);
+        var values = sheet.getDataRange().getValues();
+        for (var i = 1; i < values.length; i++) {
+            if (getNumericDate(values[i][0]) === targetNumeric) {
+                return ContentService.createTextOutput(values[i][1]).setMimeType(ContentService.MimeType.JSON);
+            }
+        }
+
+        return ContentService.createTextOutput(JSON.stringify({ result: "not_found" })).setMimeType(ContentService.MimeType.JSON);
+    } catch (err) {
+        logError("doGet", err, JSON.stringify(e.parameter));
+        return ContentService.createTextOutput(JSON.stringify({ result: "error", message: err.message })).setMimeType(ContentService.MimeType.JSON);
+    }
+}
+
+function logError(type, err, rawData) {
+    try {
+        var ss = SpreadsheetApp.getActiveSpreadsheet();
+        var logSheet = ss.getSheetByName("ErrorLogs") || ss.insertSheet("ErrorLogs");
+        if (logSheet.getLastRow() === 0) {
+            logSheet.appendRow(["시간", "유형", "에러 메시지", "원본 데이터"]);
+        }
+        logSheet.appendRow([new Date(), type, err.message, rawData]);
+    } catch (e) { }
 }
 
 // 어떤 형식이든 숫자만 추출하여 8자리(YYYYMMDD)로 정규화
@@ -61,8 +87,7 @@ function getNumericDate(cellValue) {
     var nums = str.replace(/[^0-9]/g, "");
 
     // 만약 "2026223" 같이 월/일이 한자리인 경우를 위해 보정
-    // 간단하게, "2026-2-23" 형식을 "2026-02-23"으로 바꿔서 다시 추출하는 방식 고려
-    if (nums.length < 8 && str.indexOf('.') !== -1 || str.indexOf('-') !== -1 || str.indexOf('/') !== -1) {
+    if (nums.length < 8 && (str.indexOf('.') !== -1 || str.indexOf('-') !== -1 || str.indexOf('/') !== -1)) {
         var parts = str.split(/[.\-\/]/).filter(function (p) { return p.trim().length > 0; });
         if (parts.length === 3) {
             var y = parts[0].trim();
