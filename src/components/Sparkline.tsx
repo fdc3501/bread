@@ -6,11 +6,12 @@ export interface SparkDataPoint {
     disp: number;
     rem: number;
     date?: string;       // 'YYYY-MM-DD'
-    label?: string;      // '전전날', '전날', '당일' etc.
+    label?: string;      // deprecated: 날짜 직접 표시로 대체
     weather?: Weather;
     temp?: number;
     wind?: number;
-    hasRecord?: boolean; // false이면 아직 기록되지 않은 미래 날짜
+    hasRecord?: boolean; // false이면 폐기·잔량 미기록 (미래 날짜 등)
+    hasProd?: boolean;   // false이면 생산량 데이터도 없음 (전날 기록 없음)
 }
 
 const WEATHER_ICONS: Record<string, string> = {
@@ -53,20 +54,23 @@ export const Sparkline: React.FC<Props> = ({
 
     const toY = (v: number) => PAD.top + innerH - (v / maxY) * innerH;
 
-    // hasRecord가 명시적으로 false인 경우 미기록 날짜 → 선 그리지 않음
-    // hasRecord가 undefined(기존 데이터 호환)이거나 true면 기록된 날짜로 처리
+    // 생산선: hasProd가 명시적으로 false인 경우만 제외 (undefined = 기존 호환 → 포함)
+    const lastProdIdx = data.reduce((last, d, i) =>
+        d.hasProd !== false ? i : last, -1);
+
+    // 폐기·잔량선: hasRecord가 명시적으로 false인 경우 제외
     const lastRecordedIdx = data.reduce((last, d, i) =>
         d.hasRecord !== false ? i : last, -1);
 
-    const toPoints = (series: number[]) =>
+    const toPoints = (series: number[], maxIdx: number) =>
         series
-            .slice(0, lastRecordedIdx + 1)
+            .slice(0, maxIdx + 1)
             .map((v, i) => `${PAD.left + i * xStep},${toY(v)}`)
             .join(' ');
 
-    const prodPts = toPoints(data.map(d => d.prod));
-    const dispPts = toPoints(data.map(d => d.disp));
-    const remPts = toPoints(data.map(d => d.rem));
+    const prodPts = toPoints(data.map(d => d.prod), lastProdIdx);
+    const dispPts = toPoints(data.map(d => d.disp), lastRecordedIdx);
+    const remPts  = toPoints(data.map(d => d.rem),  lastRecordedIdx);
 
     // mid Y gridline
     const midY = toY(maxY / 2);
@@ -91,20 +95,26 @@ export const Sparkline: React.FC<Props> = ({
             {showXLabels && data.map((d, i) => {
                 const x = PAD.left + i * xStep;
                 const isFuture = d.hasRecord === false;
-                const isWeekend = d.date ? [0, 6].includes(new Date(d.date + 'T00:00:00').getDay()) : false;
-                const dayLabel = d.label || (d.date ? DAY_LABELS[new Date(d.date + 'T00:00:00').getDay()] : `D${i + 1}`);
-                // 미기록 날짜는 날씨 아이콘을 흐리게, 날씨 정보가 없으면 '?' 표시 생략
-                const weatherIcon = d.weather ? (WEATHER_ICONS[d.weather] ?? '') : (isFuture ? '' : (d.date ? '❓' : ''));
+                const dateObj = d.date ? new Date(d.date + 'T00:00:00') : null;
+                const isWeekend = dateObj ? [0, 6].includes(dateObj.getDay()) : false;
+                // 실제 날짜(M/D) 표시 — label(D, D+1 등) 대신
+                const dateLabel = dateObj
+                    ? `${dateObj.getMonth() + 1}/${dateObj.getDate()}`
+                    : (d.label || `?`);
+                const weatherIcon = d.weather ? (WEATHER_ICONS[d.weather] ?? '') : '';
 
                 return (
                     <g key={i} opacity={isFuture ? 0.35 : 1}>
+                        {/* 날짜 */}
                         <text x={x} y={PAD.top + innerH + 12} className="spark-xlabel" textAnchor="middle"
                             fill={isWeekend && !isFuture ? '#f39c12' : 'rgba(255,255,255,0.7)'} style={{ fontWeight: 600 }}>
-                            {dayLabel}
+                            {dateLabel}
                         </text>
+                        {/* 날씨 아이콘 */}
                         <text x={x} y={PAD.top + innerH + 28} textAnchor="middle" style={{ fontSize: '14px' }}>
                             {weatherIcon}
                         </text>
+                        {/* 기온·풍속: 기록된 날짜만 표시 */}
                         {!isFuture && d.temp !== undefined && (
                             <text x={x} y={PAD.top + innerH + 40} textAnchor="middle" fill="var(--primary)" style={{ fontSize: '7px', fontWeight: 600 }}>
                                 {Math.round(d.temp)}°C
@@ -124,15 +134,14 @@ export const Sparkline: React.FC<Props> = ({
             <polyline points={dispPts} className="spark-line disp" />
             <polyline points={remPts} className="spark-line rem" />
 
-            {/* Data dots on last RECORDED point */}
-            {lastRecordedIdx >= 0 && (() => {
-                const lx = PAD.left + lastRecordedIdx * xStep;
-                return <>
-                    <circle cx={lx} cy={toY(data[lastRecordedIdx].prod)} r={1.5} fill="var(--secondary)" />
-                    <circle cx={lx} cy={toY(data[lastRecordedIdx].disp)} r={1.5} fill="#e74c3c" />
-                    <circle cx={lx} cy={toY(data[lastRecordedIdx].rem)} r={1.5} fill="#3498db" />
-                </>;
-            })()}
+            {/* 끝점 도트: 생산은 lastProdIdx, 폐기·잔량은 lastRecordedIdx */}
+            {lastProdIdx >= 0 && (
+                <circle cx={PAD.left + lastProdIdx * xStep} cy={toY(data[lastProdIdx].prod)} r={1.5} fill="var(--secondary)" />
+            )}
+            {lastRecordedIdx >= 0 && <>
+                <circle cx={PAD.left + lastRecordedIdx * xStep} cy={toY(data[lastRecordedIdx].disp)} r={1.5} fill="#e74c3c" />
+                <circle cx={PAD.left + lastRecordedIdx * xStep} cy={toY(data[lastRecordedIdx].rem)}  r={1.5} fill="#3498db" />
+            </>}
 
             {/* Legend */}
             <rect x={PAD.left} y={H - 8} width={5} height={2} className="spark-legend-prod" />

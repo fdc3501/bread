@@ -12,42 +12,45 @@ interface Props {
 const AnalysisDashboard: React.FC<Props> = ({ history, todayDate }) => {
     const hasDemoData = useMemo(() => history.some(s => s.isDemo), [history]);
 
-    // Build 6-day sparkline data matching the weather window (-2 to +3 days)
+    // Build 6-day sparkline data: always anchored to todayDate (-2 to +3 days)
     const getSparklineData = (breadId: string) => {
         if (history.length === 0) return [];
         const sorted = [...history].sort((a, b) => a.date.localeCompare(b.date));
 
-        // Pick the sheet matching todayDate, or fallback to the latest one
-        const todaySheet = (todayDate ? history.find(h => h.date === todayDate) : null) || sorted[sorted.length - 1];
+        // 날씨 예보는 최신 기록 시트(또는 오늘 시트)에서 가져옴
+        const weatherSheet = (todayDate ? history.find(h => h.date === todayDate) : null) || sorted[sorted.length - 1];
 
-        return todaySheet.weather.map(wRec => {
-            const historicalEntry = history.find(h => h.date === wRec.date);
+        // 항상 todayDate 기준으로 6일 윈도우 생성 (기록 여부 무관)
+        const baseDateStr = todayDate || sorted[sorted.length - 1].date;
+        const offsets = [-2, -1, 0, 1, 2, 3];
 
-            // For historical points (D-2, D-1, today), try to get the recorded weather from that day's sheet
-            const recordedWeather = historicalEntry?.weather.find(w => w.date === wRec.date);
+        return offsets.map(offset => {
+            const d = new Date(baseDateStr + 'T00:00:00');
+            d.setDate(d.getDate() + offset);
+            const dateStr = d.toISOString().split('T')[0];
 
-            // LOGIC SHIFT: The actual production for 'date' is what was planned on 'date - 1'
-            const yesterdayDate = new Date(wRec.date);
-            yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-            const yesterdayStr = yesterdayDate.toISOString().split('T')[0];
-            const yesterdayEntry = history.find(h => h.date === yesterdayStr);
+            const historicalEntry = history.find(h => h.date === dateStr);
 
-            const labelMap: Record<string, string> = {
-                '전전날': 'D-2', '전날': 'D-1', '당일': 'D',
-                '다음날': 'D+1', '다다음날': 'D+2', '다다다음날': 'D+3'
-            };
+            // 날씨: 해당 날짜 본인 시트 우선, 없으면 weatherSheet의 예보값
+            const wRec = weatherSheet.weather.find(w => w.date === dateStr);
+            const recordedWeather = historicalEntry?.weather.find(w => w.date === dateStr);
+
+            // 당일 실제 생산량 = 전날 시트의 produceQty (익일 생산 결정값)
+            const prevDate = new Date(dateStr + 'T00:00:00');
+            prevDate.setDate(prevDate.getDate() - 1);
+            const prevDateStr = prevDate.toISOString().split('T')[0];
+            const prevEntry = history.find(h => h.date === prevDateStr);
 
             return {
-                // Production seen on 'date' is actually from 'yesterday's plan'
-                prod: yesterdayEntry ? (Number(yesterdayEntry.breads[breadId]?.produceQty) || 0) : 0,
+                prod: prevEntry ? (Number(prevEntry.breads[breadId]?.produceQty) || 0) : 0,
                 disp: historicalEntry ? (Number(historicalEntry.breads[breadId]?.disposal) || 0) : 0,
                 rem: historicalEntry ? (Number(historicalEntry.breads[breadId]?.remain) || 0) : 0,
-                date: wRec.date,
-                label: labelMap[wRec.label] || wRec.label,
-                weather: recordedWeather?.weather || wRec.weather || undefined,
-                temp: recordedWeather?.temp || wRec.temp,
-                wind: recordedWeather?.wind || wRec.wind,
-                hasRecord: !!historicalEntry, // 실제 기록된 날짜만 true
+                date: dateStr,
+                weather: recordedWeather?.weather || wRec?.weather || undefined,
+                temp: recordedWeather?.temp !== undefined ? recordedWeather.temp : wRec?.temp,
+                wind: recordedWeather?.wind !== undefined ? recordedWeather.wind : wRec?.wind,
+                hasRecord: !!historicalEntry,  // 폐기·잔량 기록 여부
+                hasProd: !!prevEntry,          // 생산량 데이터 존재 여부 (전날 기록 있으면 true)
             };
         });
     };
