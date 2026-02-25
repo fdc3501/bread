@@ -35,26 +35,21 @@ const AnalysisDashboard: React.FC<Props> = ({ history, todayDate }) => {
             const wRec = weatherSheet.weather.find(w => w.date === dateStr);
             const recordedWeather = historicalEntry?.weather.find(w => w.date === dateStr);
 
-            // 당일 실제 생산량 = 전날 시트의 produceQty (익일 생산 결정값)
-            const prevDate = new Date(dateStr + 'T00:00:00');
-            prevDate.setDate(prevDate.getDate() - 1);
-            const prevDateStr = prevDate.toISOString().split('T')[0];
-            const prevEntry = history.find(h => h.date === prevDateStr);
-
-            // produce: false 이면 생산X → produceQty 무시
-            const prevRecord = prevEntry?.breads[breadId];
-            const shouldProduce = prevRecord?.produce !== false;
+            // NON-SHIFT: 각 날짜의 produceQty = 그 날 기록한 익일 생산 결정값
+            // 24일 컬럼 → 24일 시트의 disposal/remain/produceQty 를 그대로 표시
+            const record = historicalEntry?.breads[breadId];
+            const shouldProduce = record?.produce !== false;
 
             return {
-                prod: (prevRecord && shouldProduce) ? (Number(prevRecord.produceQty) || 0) : 0,
-                disp: historicalEntry ? (Number(historicalEntry.breads[breadId]?.disposal) || 0) : 0,
-                rem: historicalEntry ? (Number(historicalEntry.breads[breadId]?.remain) || 0) : 0,
+                prod: (record && shouldProduce) ? (Number(record.produceQty) || 0) : 0,
+                disp: record ? (Number(record.disposal) || 0) : 0,
+                rem: record ? (Number(record.remain) || 0) : 0,
                 date: dateStr,
                 weather: recordedWeather?.weather || wRec?.weather || undefined,
                 temp: recordedWeather?.temp !== undefined ? recordedWeather.temp : wRec?.temp,
                 wind: recordedWeather?.wind !== undefined ? recordedWeather.wind : wRec?.wind,
-                hasRecord: !!historicalEntry,            // 폐기·잔량 기록 여부
-                hasProd: !!prevEntry && shouldProduce,   // 실제 생산 예정인 날짜만 true
+                hasRecord: !!historicalEntry,                     // 폐기·잔량 기록 여부
+                hasProd: !!historicalEntry && shouldProduce,      // 해당 날 기록 있고 생산 예정이면 true
             };
         });
     };
