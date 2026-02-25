@@ -10,6 +10,7 @@ export interface SparkDataPoint {
     weather?: Weather;
     temp?: number;
     wind?: number;
+    hasRecord?: boolean; // false이면 아직 기록되지 않은 미래 날짜
 }
 
 const WEATHER_ICONS: Record<string, string> = {
@@ -51,8 +52,17 @@ export const Sparkline: React.FC<Props> = ({
     const xStep = data.length > 1 ? innerW / (data.length - 1) : innerW;
 
     const toY = (v: number) => PAD.top + innerH - (v / maxY) * innerH;
+
+    // hasRecord가 명시적으로 false인 경우 미기록 날짜 → 선 그리지 않음
+    // hasRecord가 undefined(기존 데이터 호환)이거나 true면 기록된 날짜로 처리
+    const lastRecordedIdx = data.reduce((last, d, i) =>
+        d.hasRecord !== false ? i : last, -1);
+
     const toPoints = (series: number[]) =>
-        series.map((v, i) => `${PAD.left + i * xStep},${toY(v)}`).join(' ');
+        series
+            .slice(0, lastRecordedIdx + 1)
+            .map((v, i) => `${PAD.left + i * xStep},${toY(v)}`)
+            .join(' ');
 
     const prodPts = toPoints(data.map(d => d.prod));
     const dispPts = toPoints(data.map(d => d.disp));
@@ -80,25 +90,27 @@ export const Sparkline: React.FC<Props> = ({
             {/* X labels: day + weather + details */}
             {showXLabels && data.map((d, i) => {
                 const x = PAD.left + i * xStep;
+                const isFuture = d.hasRecord === false;
                 const isWeekend = d.date ? [0, 6].includes(new Date(d.date + 'T00:00:00').getDay()) : false;
                 const dayLabel = d.label || (d.date ? DAY_LABELS[new Date(d.date + 'T00:00:00').getDay()] : `D${i + 1}`);
-                const weatherIcon = d.weather ? (WEATHER_ICONS[d.weather] ?? '') : (d.date ? '❓' : '');
+                // 미기록 날짜는 날씨 아이콘을 흐리게, 날씨 정보가 없으면 '?' 표시 생략
+                const weatherIcon = d.weather ? (WEATHER_ICONS[d.weather] ?? '') : (isFuture ? '' : (d.date ? '❓' : ''));
 
                 return (
-                    <g key={i}>
+                    <g key={i} opacity={isFuture ? 0.35 : 1}>
                         <text x={x} y={PAD.top + innerH + 12} className="spark-xlabel" textAnchor="middle"
-                            fill={isWeekend ? '#f39c12' : 'rgba(255,255,255,0.7)'} style={{ fontWeight: 600 }}>
+                            fill={isWeekend && !isFuture ? '#f39c12' : 'rgba(255,255,255,0.7)'} style={{ fontWeight: 600 }}>
                             {dayLabel}
                         </text>
                         <text x={x} y={PAD.top + innerH + 28} textAnchor="middle" style={{ fontSize: '14px' }}>
                             {weatherIcon}
                         </text>
-                        {d.temp !== undefined && (
+                        {!isFuture && d.temp !== undefined && (
                             <text x={x} y={PAD.top + innerH + 40} textAnchor="middle" fill="var(--primary)" style={{ fontSize: '7px', fontWeight: 600 }}>
                                 {Math.round(d.temp)}°C
                             </text>
                         )}
-                        {d.wind !== undefined && (
+                        {!isFuture && d.wind !== undefined && (
                             <text x={x} y={PAD.top + innerH + 48} textAnchor="middle" fill="var(--text-muted)" style={{ fontSize: '6px' }}>
                                 {d.wind.toFixed(1)}m/s
                             </text>
@@ -112,14 +124,13 @@ export const Sparkline: React.FC<Props> = ({
             <polyline points={dispPts} className="spark-line disp" />
             <polyline points={remPts} className="spark-line rem" />
 
-            {/* Data dots on last point */}
-            {(() => {
-                const last = data.length - 1;
-                const lx = PAD.left + last * xStep;
+            {/* Data dots on last RECORDED point */}
+            {lastRecordedIdx >= 0 && (() => {
+                const lx = PAD.left + lastRecordedIdx * xStep;
                 return <>
-                    <circle cx={lx} cy={toY(data[last].prod)} r={1.5} fill="var(--secondary)" />
-                    <circle cx={lx} cy={toY(data[last].disp)} r={1.5} fill="#e74c3c" />
-                    <circle cx={lx} cy={toY(data[last].rem)} r={1.5} fill="#3498db" />
+                    <circle cx={lx} cy={toY(data[lastRecordedIdx].prod)} r={1.5} fill="var(--secondary)" />
+                    <circle cx={lx} cy={toY(data[lastRecordedIdx].disp)} r={1.5} fill="#e74c3c" />
+                    <circle cx={lx} cy={toY(data[lastRecordedIdx].rem)} r={1.5} fill="#3498db" />
                 </>;
             })()}
 

@@ -47,6 +47,7 @@ const AnalysisDashboard: React.FC<Props> = ({ history, todayDate }) => {
                 weather: recordedWeather?.weather || wRec.weather || undefined,
                 temp: recordedWeather?.temp || wRec.temp,
                 wind: recordedWeather?.wind || wRec.wind,
+                hasRecord: !!historicalEntry, // 실제 기록된 날짜만 true
             };
         });
     };
