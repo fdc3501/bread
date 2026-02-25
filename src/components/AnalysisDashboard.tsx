@@ -41,16 +41,20 @@ const AnalysisDashboard: React.FC<Props> = ({ history, todayDate }) => {
             const prevDateStr = prevDate.toISOString().split('T')[0];
             const prevEntry = history.find(h => h.date === prevDateStr);
 
+            // produce: false 이면 생산X → produceQty 무시
+            const prevRecord = prevEntry?.breads[breadId];
+            const shouldProduce = prevRecord?.produce !== false;
+
             return {
-                prod: prevEntry ? (Number(prevEntry.breads[breadId]?.produceQty) || 0) : 0,
+                prod: (prevRecord && shouldProduce) ? (Number(prevRecord.produceQty) || 0) : 0,
                 disp: historicalEntry ? (Number(historicalEntry.breads[breadId]?.disposal) || 0) : 0,
                 rem: historicalEntry ? (Number(historicalEntry.breads[breadId]?.remain) || 0) : 0,
                 date: dateStr,
                 weather: recordedWeather?.weather || wRec?.weather || undefined,
                 temp: recordedWeather?.temp !== undefined ? recordedWeather.temp : wRec?.temp,
                 wind: recordedWeather?.wind !== undefined ? recordedWeather.wind : wRec?.wind,
-                hasRecord: !!historicalEntry,  // 폐기·잔량 기록 여부
-                hasProd: !!prevEntry,          // 생산량 데이터 존재 여부 (전날 기록 있으면 true)
+                hasRecord: !!historicalEntry,            // 폐기·잔량 기록 여부
+                hasProd: !!prevEntry && shouldProduce,   // 실제 생산 예정인 날짜만 true
             };
         });
     };

@@ -80,8 +80,10 @@ const App: React.FC = () => {
       const bData = entry?.breads[breadId];
       const todayWeatherEntry = entry?.weather?.find(w => w.date === dateStr);
 
+      // produce: false(생산X)이면 produceQty 무시
+      const shouldProduce = bData?.produce !== false;
       last7Days.push({
-        prod: Number(bData?.produceQty) || 0,
+        prod: Number(shouldProduce ? bData?.produceQty : 0) || 0,
         disp: Number(bData?.disposal) || 0,
         rem: Number(bData?.remain) || 0,
         date: dateStr,

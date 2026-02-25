@@ -53,23 +53,26 @@ export const Sparkline: React.FC<Props> = ({
 
     const toY = (v: number) => PAD.top + innerH - (v / maxY) * innerH;
 
-    // 생산선: hasProd가 명시적으로 false인 경우만 제외 (undefined = 기존 호환 → 포함)
-    const lastProdIdx = data.reduce((last, d, i) =>
-        d.hasProd !== false ? i : last, -1);
+    // 유효 구간 계산: 시작(first)~끝(last) 사이에만 선을 그려 데이터 없는 구간 제외
+    // hasProd/hasRecord가 undefined이면 기존 데이터 호환을 위해 true로 취급
+    const firstProdIdx = data.findIndex(d => d.hasProd !== false);
+    const lastProdIdx  = data.reduce((last, d, i) => d.hasProd !== false ? i : last, -1);
 
-    // 폐기·잔량선: hasRecord가 명시적으로 false인 경우 제외
-    const lastRecordedIdx = data.reduce((last, d, i) =>
-        d.hasRecord !== false ? i : last, -1);
+    const firstRecIdx = data.findIndex(d => d.hasRecord !== false);
+    const lastRecIdx  = data.reduce((last, d, i) => d.hasRecord !== false ? i : last, -1);
 
-    const toPoints = (series: number[], maxIdx: number) =>
-        series
-            .slice(0, maxIdx + 1)
-            .map((v, i) => `${PAD.left + i * xStep},${toY(v)}`)
+    // 지정된 [startIdx, endIdx] 범위의 좌표 문자열 생성
+    const toPointsRange = (series: number[], startIdx: number, endIdx: number) => {
+        if (startIdx < 0 || endIdx < 0 || startIdx > endIdx) return '';
+        return series
+            .slice(startIdx, endIdx + 1)
+            .map((v, i) => `${PAD.left + (startIdx + i) * xStep},${toY(v)}`)
             .join(' ');
+    };
 
-    const prodPts = toPoints(data.map(d => d.prod), lastProdIdx);
-    const dispPts = toPoints(data.map(d => d.disp), lastRecordedIdx);
-    const remPts  = toPoints(data.map(d => d.rem),  lastRecordedIdx);
+    const prodPts = toPointsRange(data.map(d => d.prod), firstProdIdx, lastProdIdx);
+    const dispPts = toPointsRange(data.map(d => d.disp), firstRecIdx,  lastRecIdx);
+    const remPts  = toPointsRange(data.map(d => d.rem),  firstRecIdx,  lastRecIdx);
 
     // mid Y gridline
     const midY = toY(maxY / 2);
@@ -133,13 +136,13 @@ export const Sparkline: React.FC<Props> = ({
             <polyline points={dispPts} className="spark-line disp" />
             <polyline points={remPts} className="spark-line rem" />
 
-            {/* 끝점 도트: 생산은 lastProdIdx, 폐기·잔량은 lastRecordedIdx */}
-            {lastProdIdx >= 0 && (
+            {/* 끝점 도트: 각 선의 lastIdx 위치에 표시 */}
+            {lastProdIdx >= 0 && prodPts && (
                 <circle cx={PAD.left + lastProdIdx * xStep} cy={toY(data[lastProdIdx].prod)} r={1.5} fill="var(--secondary)" />
             )}
-            {lastRecordedIdx >= 0 && <>
-                <circle cx={PAD.left + lastRecordedIdx * xStep} cy={toY(data[lastRecordedIdx].disp)} r={1.5} fill="#e74c3c" />
-                <circle cx={PAD.left + lastRecordedIdx * xStep} cy={toY(data[lastRecordedIdx].rem)}  r={1.5} fill="#3498db" />
+            {lastRecIdx >= 0 && dispPts && <>
+                <circle cx={PAD.left + lastRecIdx * xStep} cy={toY(data[lastRecIdx].disp)} r={1.5} fill="#e74c3c" />
+                <circle cx={PAD.left + lastRecIdx * xStep} cy={toY(data[lastRecIdx].rem)}  r={1.5} fill="#3498db" />
             </>}
 
             {/* Legend */}
