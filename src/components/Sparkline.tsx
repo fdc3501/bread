@@ -23,7 +23,6 @@ const WEATHER_ICONS: Record<string, string> = {
     unknown: '❓'
 };
 
-const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 
 interface Props {
     data: SparkDataPoint[];
