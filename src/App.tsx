@@ -195,7 +195,14 @@ const App: React.FC = () => {
           </thead>
           <tbody>
             {sortedItems.map(item => {
-              const record = sheet.breads[item.id];
+              const record = sheet.breads[item.id] ?? {
+                breadId: item.id,
+                remain: '',
+                disposal: 0,
+                produce: true,
+                produceQty: item.defaultQty ?? '',
+                soldOutTime: ''
+              };
               const isQuantityDisabled = item.defaultQty === null;
               const hidden = !matchSearch(item.name);
 

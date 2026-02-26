@@ -225,21 +225,39 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
         }
 
         if (currentSheet) {
-            setSheet(currentSheet);
+            // 커스텀 빵 목록 복원 (다른 기기에서 저장한 경우 반영)
+            let resolvedBreadList = masterBreadList;
+            if (currentSheet.customBreads?.length) {
+                const prevIds = new Set(masterBreadList.map(b => b.id));
+                const newItems = currentSheet.customBreads.filter(b => !prevIds.has(b.id));
+                if (newItems.length) {
+                    resolvedBreadList = [...masterBreadList, ...newItems];
+                    setMasterBreadList(resolvedBreadList);
+                    localStorage.setItem(BREAD_LIST_KEY, JSON.stringify(resolvedBreadList));
+                }
+            }
+
+            // masterBreadList에 있지만 sheet에 없는 빵에 기본 레코드 추가 → 렌더 크래시 방지
+            const missingRecords: Record<string, BreadRecord> = {};
+            resolvedBreadList.forEach(bread => {
+                if (!currentSheet.breads[bread.id]) {
+                    missingRecords[bread.id] = {
+                        breadId: bread.id,
+                        remain: '',
+                        disposal: 0,
+                        produce: true,
+                        produceQty: bread.defaultQty ?? '',
+                        soldOutTime: ''
+                    };
+                }
+            });
+            const patchedSheet = Object.keys(missingRecords).length > 0
+                ? { ...currentSheet, breads: { ...currentSheet.breads, ...missingRecords } }
+                : currentSheet;
+
+            setSheet(patchedSheet);
             setSavedAt(new Date());
             setIsDirty(false);
-
-            // 커스텀 빵 목록 복원 (다른 기기에서 저장한 경우 반영)
-            if (currentSheet.customBreads?.length) {
-                setMasterBreadList(prev => {
-                    const prevIds = new Set(prev.map(b => b.id));
-                    const newItems = currentSheet.customBreads!.filter(b => !prevIds.has(b.id));
-                    if (!newItems.length) return prev;
-                    const merged = [...prev, ...newItems];
-                    localStorage.setItem(BREAD_LIST_KEY, JSON.stringify(merged));
-                    return merged;
-                });
-            }
 
             // AUTO-UPDATE WEATHER: if today's weather is missing
             const todayWeather = currentSheet.weather.find(w => w.label === '당일')?.weather;
