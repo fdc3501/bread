@@ -415,7 +415,11 @@ const App: React.FC = () => {
                   }}
                 />
                 {searchInput && (
-                  <button className="clear-search" onClick={() => { setSearchInput(''); setSearchTerm(''); }}>✕</button>
+                  <button
+                    className="clear-search"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => { setSearchInput(''); setSearchTerm(''); }}
+                  >✕</button>
                 )}
               </div>
               <div className="filter-group">

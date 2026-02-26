@@ -34,4 +34,5 @@ export interface DailySheet {
   memo: string;
   isDemo?: boolean; // true if this is demo/simulator data
   status?: 'draft' | 'finalized';
+  customBreads?: BreadItem[]; // 사용자가 추가한 커스텀 빵 목록 — 기기 간 동기화용
 }

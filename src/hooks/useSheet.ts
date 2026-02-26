@@ -93,7 +93,13 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
             };
         });
 
-        const sheetToSave: DailySheet = { ...sheet, breads: sanitizedBreads };
+        // 커스텀 빵 목록을 시트에 포함 → 다른 기기에서 로드 시 복원됨
+        const customItems = masterBreadList.filter(b => b.id.startsWith('custom_'));
+        const sheetToSave: DailySheet = {
+            ...sheet,
+            breads: sanitizedBreads,
+            ...(customItems.length ? { customBreads: customItems } : {}),
+        };
 
         // Local Save first
         localStorage.setItem(`${STORAGE_KEY}_${sheet.date}`, JSON.stringify(sheetToSave));
@@ -223,6 +229,18 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
             setSavedAt(new Date());
             setIsDirty(false);
 
+            // 커스텀 빵 목록 복원 (다른 기기에서 저장한 경우 반영)
+            if (currentSheet.customBreads?.length) {
+                setMasterBreadList(prev => {
+                    const prevIds = new Set(prev.map(b => b.id));
+                    const newItems = currentSheet.customBreads!.filter(b => !prevIds.has(b.id));
+                    if (!newItems.length) return prev;
+                    const merged = [...prev, ...newItems];
+                    localStorage.setItem(BREAD_LIST_KEY, JSON.stringify(merged));
+                    return merged;
+                });
+            }
+
             // AUTO-UPDATE WEATHER: if today's weather is missing
             const todayWeather = currentSheet.weather.find(w => w.label === '당일')?.weather;
             if (!todayWeather) {
@@ -241,7 +259,7 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
 
             const prefillBreads = getEmptyBreads(masterBreadList);
             if (yesterdaySheet) {
-                BREAD_LIST.forEach(bread => {
+                masterBreadList.forEach(bread => {
                     const yRec = yesterdaySheet.breads[bread.id];
                     if (!yRec) return;
                     const yProd = Number(yRec.produceQty) || 0;
@@ -257,9 +275,9 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
                         // More than 15% unsold → reduce
                         suggestedQty = Math.max(1, Math.round(yProd * 0.85));
                     }
+                    // produce 플래그는 이월하지 않음 — 매일 기본값 true에서 시작
                     prefillBreads[bread.id] = {
                         ...prefillBreads[bread.id],
-                        produce: yRec.produce,
                         produceQty: suggestedQty || bread.defaultQty || '',
                     };
                 });
