@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useSheet } from './hooks/useSheet';
 import type { Weather, WeatherRecord } from './types';
 import AnalysisDashboard from './components/AnalysisDashboard';
@@ -12,6 +12,57 @@ const WEATHER_ICONS: Record<Weather, string> = {
   snowy: '❄️',
   'partly-cloudy': '⛅'
 };
+
+interface SearchBarProps {
+  searchInput: string;
+  onSearchChange: (raw: string, term: string | null) => void;
+  onClear: () => void;
+}
+
+const SearchBar = React.memo(({ searchInput, onSearchChange, onClear }: SearchBarProps) => {
+  const composingRef = useRef(false);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  return (
+    <div className="search-bar">
+      <span className="search-icon">🔍</span>
+      <input
+        type="text"
+        placeholder="빵 이름을 검색하세요..."
+        value={searchInput}
+        autoComplete="off"
+        spellCheck={false}
+        onChange={(e) => {
+          const val = e.target.value;
+          if (composingRef.current) {
+            // IME 조합 중엔 표시값만 즉시 반영, 필터링은 조합 완료 후
+            onSearchChange(val, null);
+          } else {
+            onSearchChange(val, null);
+            clearTimeout(debounceTimer.current);
+            debounceTimer.current = setTimeout(() => {
+              onSearchChange(val, val);
+            }, 150);
+          }
+        }}
+        onCompositionStart={() => { composingRef.current = true; }}
+        onCompositionEnd={(e) => {
+          composingRef.current = false;
+          const val = e.currentTarget.value;
+          clearTimeout(debounceTimer.current);
+          onSearchChange(val, val);
+        }}
+      />
+      {searchInput && (
+        <button
+          className="clear-search"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={onClear}
+        >✕</button>
+      )}
+    </div>
+  );
+});
 
 const App: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(() => {
@@ -29,7 +80,17 @@ const App: React.FC = () => {
   const [lng, setLng] = useState(() => Number(localStorage.getItem('longitude')) || 126.674);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchInput, setSearchInput] = useState('');
-  const composingRef = React.useRef(false);
+
+  const handleSearchChange = useCallback((raw: string, term: string | null) => {
+    setSearchInput(raw);
+    if (term !== null) setSearchTerm(term);
+  }, []);
+
+  const handleSearchClear = useCallback(() => {
+    setSearchInput('');
+    setSearchTerm('');
+  }, []);
+
   const [sortMode, setSortMode] = useState<'original' | 'abc'>('original');
   const [isAddingBread, setIsAddingBread] = useState(false);
   const [newBread, setNewBread] = useState<{ name: string, group: 'A' | 'B', defaultQty: string | number }>({ name: '', group: 'A', defaultQty: '' });
@@ -404,31 +465,11 @@ const App: React.FC = () => {
         {activeTab === 'edit' ? (
           <>
             <div className="edit-controls no-print">
-              <div className="search-bar">
-                <span className="search-icon">🔍</span>
-                <input
-                  type="text"
-                  lang="ko"
-                  placeholder="빵 이름을 검색하세요..."
-                  value={searchInput}
-                  onChange={(e) => {
-                    setSearchInput(e.target.value);
-                    if (!composingRef.current) setSearchTerm(e.target.value);
-                  }}
-                  onCompositionStart={() => { composingRef.current = true; }}
-                  onCompositionEnd={(e) => {
-                    composingRef.current = false;
-                    setSearchTerm(e.currentTarget.value);
-                  }}
-                />
-                {searchInput && (
-                  <button
-                    className="clear-search"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => { setSearchInput(''); setSearchTerm(''); }}
-                  >✕</button>
-                )}
-              </div>
+              <SearchBar
+                searchInput={searchInput}
+                onSearchChange={handleSearchChange}
+                onClear={handleSearchClear}
+              />
               <div className="filter-group">
                 <button
                   className={`sort-toggle-btn ${sortMode === 'abc' ? 'active' : ''}`}
