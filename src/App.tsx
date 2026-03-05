@@ -156,10 +156,18 @@ const App: React.FC = () => {
       const bData = entry?.breads[breadId];
       const todayWeatherEntry = entry?.weather?.find(w => w.date === dateStr);
 
+      // 데이터 시프트(Data Shift) 보정:
+      // 오늘 매장에 깔리는 빵 개수(생산량)는 '어제 시트'에 적힌 내일 생산수량(produceQty)입니다.
+      const yesterdayDate = new Date(d);
+      yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+      const yDateStr = yesterdayDate.toISOString().split('T')[0];
+      const yesterdayEntry = allHistory.find(h => h.date === yDateStr);
+      const actualProdQtyForThatDay = yesterdayEntry?.breads[breadId]?.produceQty;
+
       // produce: false(생산X)이면 produceQty 무시
       const shouldProduce = bData?.produce !== false;
       last7Days.push({
-        prod: Number(shouldProduce ? bData?.produceQty : 0) || 0,
+        prod: Number(shouldProduce ? actualProdQtyForThatDay : 0) || 0,
         disp: Number(bData?.disposal) || 0,
         rem: Number(bData?.remain) || 0,
         date: dateStr,
@@ -177,6 +185,8 @@ const App: React.FC = () => {
     setCurrentDate(newDate);
     loadDate(newDate);
   };
+
+  const isFinalized = sheet.status === 'finalized';
 
   const handleTabChange = (tab: 'edit' | 'analyze' | 'demo' | 'settings') => {
     if (isDirty && !confirm('저장하지 않은 변경사항이 있습니다. 계속하시겠습니까?')) return;
@@ -295,6 +305,7 @@ const App: React.FC = () => {
                       onChange={(e) => updateBreadRecord(item.id, { remain: e.target.value })}
                       placeholder="0"
                       onFocus={(e) => e.target.select()}
+                      readOnly={isFinalized}
                     />
                   </td>
                   <td>
@@ -304,6 +315,7 @@ const App: React.FC = () => {
                       onChange={(e) => updateBreadRecord(item.id, { disposal: e.target.value })}
                       placeholder="0"
                       onFocus={(e) => e.target.select()}
+                      readOnly={isFinalized}
                     />
                   </td>
                   <td className="no-print center">
@@ -313,6 +325,7 @@ const App: React.FC = () => {
                     <button
                       className={`toggle-btn ${record.produce ? 'active' : ''}`}
                       onClick={() => updateBreadRecord(item.id, { produce: !record.produce })}
+                      disabled={isFinalized}
                     >
                       {record.produce ? '✅' : '❌'}
                     </button>
@@ -323,7 +336,7 @@ const App: React.FC = () => {
                         type="number"
                         value={record.produceQty}
                         onChange={(e) => updateBreadRecord(item.id, { produceQty: e.target.value })}
-                        disabled={!record.produce}
+                        disabled={!record.produce || isFinalized}
                       />
                     ) : (
                       <span className="no-qty">-</span>
@@ -334,6 +347,7 @@ const App: React.FC = () => {
                       value={record.soldOutTime || ''}
                       onChange={(e) => updateBreadRecord(item.id, { soldOutTime: e.target.value })}
                       className="hour-select"
+                      disabled={isFinalized}
                     >
                       <option value="">-</option>
                       {hours.map(h => (
@@ -348,6 +362,7 @@ const App: React.FC = () => {
                       className="delete-bread-btn"
                       onClick={() => deleteBreadItem(item.id)}
                       title="품목 삭제"
+                      disabled={isFinalized}
                     >
                       🗑️
                     </button>
@@ -546,6 +561,7 @@ const App: React.FC = () => {
                 value={sheet.memo}
                 onChange={(e) => updateMemo(e.target.value)}
                 placeholder="제빵기사님께 전달할 내용을 적어주세요..."
+                readOnly={isFinalized}
               />
             </section>
           </>
