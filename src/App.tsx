@@ -14,50 +14,68 @@ const WEATHER_ICONS: Record<Weather, string> = {
 };
 
 interface SearchBarProps {
-  searchInput: string;
-  onSearchChange: (raw: string, term: string | null) => void;
+  onSearchChange: (term: string) => void;
   onClear: () => void;
 }
 
-const SearchBar = React.memo(({ searchInput, onSearchChange, onClear }: SearchBarProps) => {
+// IME(한/영 입력기) 버그 수정:
+// controlled input (value={...}) 을 사용하면 React가 리렌더링마다 DOM의 value를
+// 강제로 패치하는데, 이 과정에서 Windows+Chrome 환경의 한글 IME 세션이 초기화됨.
+// uncontrolled input (ref 기반)으로 전환하면 React가 DOM을 건드리지 않아 IME가 유지됨.
+const SearchBar = React.memo(({ onSearchChange, onClear }: SearchBarProps) => {
+  const inputRef = useRef<HTMLInputElement>(null);
   const composingRef = useRef(false);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // clear 버튼 표시 여부만 로컬 state로 관리 (검색어 전체를 state로 올리지 않음)
+  const [hasContent, setHasContent] = useState(false);
+
+  const handleClear = useCallback(() => {
+    if (inputRef.current) inputRef.current.value = '';
+    setHasContent(false);
+    onClear();
+    inputRef.current?.focus();
+  }, [onClear]);
 
   return (
     <div className="search-bar">
       <span className="search-icon">🔍</span>
       <input
+        ref={inputRef}
         type="text"
+        // inputMode="text": number 타입 input에 포커스 후 돌아올 때 IME가 숫자모드로
+        // 남아있는 문제를 방지. 브라우저/OS에 이 input이 text임을 명시적으로 알림.
+        inputMode="text"
         placeholder="빵 이름을 검색하세요..."
-        value={searchInput}
+        // value 속성 없음 → uncontrolled input
         autoComplete="off"
         spellCheck={false}
         onChange={(e) => {
           const val = e.target.value;
+          setHasContent(val.length > 0);
           if (composingRef.current) {
-            // IME 조합 중엔 표시값만 즉시 반영, 필터링은 조합 완료 후
-            onSearchChange(val, null);
-          } else {
-            onSearchChange(val, null);
-            clearTimeout(debounceTimer.current);
-            debounceTimer.current = setTimeout(() => {
-              onSearchChange(val, val);
-            }, 150);
+            // IME 조합 중(compositionstart~end 사이)에는 검색 필터링 하지 않음
+            // 조합이 끝난 후(onCompositionEnd)에 최종 검색어로 필터링
+            return;
           }
+          clearTimeout(debounceTimer.current);
+          debounceTimer.current = setTimeout(() => {
+            onSearchChange(val);
+          }, 150);
         }}
         onCompositionStart={() => { composingRef.current = true; }}
         onCompositionEnd={(e) => {
           composingRef.current = false;
           const val = e.currentTarget.value;
           clearTimeout(debounceTimer.current);
-          onSearchChange(val, val);
+          // 조합 완료 후 즉시 검색어 반영 (debounce 없이)
+          onSearchChange(val);
         }}
       />
-      {searchInput && (
+      {hasContent && (
         <button
           className="clear-search"
           onMouseDown={(e) => e.preventDefault()}
-          onClick={onClear}
+          onClick={handleClear}
         >✕</button>
       )}
     </div>
@@ -79,15 +97,12 @@ const App: React.FC = () => {
   const [lat, setLat] = useState(() => Number(localStorage.getItem('latitude')) || 37.526);
   const [lng, setLng] = useState(() => Number(localStorage.getItem('longitude')) || 126.674);
   const [searchTerm, setSearchTerm] = useState('');
-  const [searchInput, setSearchInput] = useState('');
 
-  const handleSearchChange = useCallback((raw: string, term: string | null) => {
-    setSearchInput(raw);
-    if (term !== null) setSearchTerm(term);
+  const handleSearchChange = useCallback((term: string) => {
+    setSearchTerm(term);
   }, []);
 
   const handleSearchClear = useCallback(() => {
-    setSearchInput('');
     setSearchTerm('');
   }, []);
 
@@ -466,7 +481,6 @@ const App: React.FC = () => {
           <>
             <div className="edit-controls no-print">
               <SearchBar
-                searchInput={searchInput}
                 onSearchChange={handleSearchChange}
                 onClear={handleSearchClear}
               />
