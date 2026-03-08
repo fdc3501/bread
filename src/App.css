@@ -390,6 +390,14 @@ select:focus {
 }
 
 
+.search-bar input {
+  width: 100%;
+  padding-left: 36px;
+  padding-right: 36px;
+  height: 42px;
+  ime-mode: active;
+}
+
 .clear-search {
   position: absolute;
   right: 12px;
