@@ -6,11 +6,11 @@ import { Sparkline } from './components/Sparkline';
 import './App.css';
 
 const WEATHER_ICONS: Record<Weather, string> = {
-  sunny: '?截?,
-  cloudy: '?곻툘',
-  rainy: '?뙢截?,
-  snowy: '?꾬툘',
-  'partly-cloudy': '??
+  sunny: '☀️',
+  cloudy: '☁️',
+  rainy: '🌧️',
+  snowy: '❄️',
+  'partly-cloudy': '⛅'
 };
 
 interface SearchBarProps {
@@ -18,14 +18,15 @@ interface SearchBarProps {
   onClear: () => void;
 }
 
-// IME(?????낅젰湲? 踰꾧렇 ?섏젙:
-// controlled input (value={...}) ???ъ슜?섎㈃ React媛 由щ젋?붾쭅留덈떎 DOM??value瑜?// 媛뺤젣濡??⑥튂?섎뒗?? ??怨쇱젙?먯꽌 Windows+Chrome ?섍꼍???쒓? IME ?몄뀡??珥덇린?붾맖.
-// uncontrolled input (ref 湲곕컲)?쇰줈 ?꾪솚?섎㈃ React媛 DOM??嫄대뱶由ъ? ?딆븘 IME媛 ?좎???
+// IME(한/영 입력기) 버그 수정:
+// controlled input (value={...}) 을 사용하면 React가 리렌더링마다 DOM의 value를
+// 강제로 패치하는데, 이 과정에서 Windows+Chrome 환경의 한글 IME 세션이 초기화됨.
+// uncontrolled input (ref 기반)으로 전환하면 React가 DOM을 건드리지 않아 IME가 유지됨.
 const SearchBar = React.memo(({ onSearchChange, onClear }: SearchBarProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const composingRef = useRef(false);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  // clear 踰꾪듉 ?쒖떆 ?щ?留?濡쒖뺄 state濡?愿由?(寃?됱뼱 ?꾩껜瑜?state濡??щ━吏 ?딆쓬)
+  // clear 버튼 표시 여부만 로컬 state로 관리 (검색어 전체를 state로 올리지 않음)
   const [hasContent, setHasContent] = useState(false);
 
   const handleClear = useCallback(() => {
@@ -37,22 +38,25 @@ const SearchBar = React.memo(({ onSearchChange, onClear }: SearchBarProps) => {
 
   return (
     <div className="search-bar">
-      <span className="search-icon">?뵇</span>
+      <span className="search-icon">🔍</span>
       <input
         ref={inputRef}
         type="text"
-        // inputMode="text": number ???input???ъ빱?????뚯븘????IME媛 ?レ옄紐⑤뱶濡?        // ?⑥븘?덈뒗 臾몄젣瑜?諛⑹?. 釉뚮씪?곗?/OS????input??text?꾩쓣 紐낆떆?곸쑝濡??뚮┝.
+        lang="ko"
+        // inputMode="text": number 타입 input에 포커스 후 돌아올 때 IME가 숫자모드로
+        // 남아있는 문제를 방지. 브라우저/OS에 이 input이 text임을 명시적으로 알림.
         inputMode="text"
-        placeholder="鍮??대쫫??寃?됲븯?몄슂..."
-        // value ?띿꽦 ?놁쓬 ??uncontrolled input
+        placeholder="빵 이름을 검색하세요..."
+        // value 속성 없음 → uncontrolled input
         autoComplete="off"
         spellCheck={false}
         onChange={(e) => {
           const val = e.target.value;
           setHasContent(val.length > 0);
           if (composingRef.current) {
-            // IME 議고빀 以?compositionstart~end ?ъ씠)?먮뒗 寃???꾪꽣留??섏? ?딆쓬
-            // 議고빀???앸궃 ??onCompositionEnd)??理쒖쥌 寃?됱뼱濡??꾪꽣留?            return;
+            // IME 조합 중(compositionstart~end 사이)에는 검색 필터링 하지 않음
+            // 조합이 끝난 후(onCompositionEnd)에 최종 검색어로 필터링
+            return;
           }
           clearTimeout(debounceTimer.current);
           debounceTimer.current = setTimeout(() => {
@@ -64,7 +68,7 @@ const SearchBar = React.memo(({ onSearchChange, onClear }: SearchBarProps) => {
           composingRef.current = false;
           const val = e.currentTarget.value;
           clearTimeout(debounceTimer.current);
-          // 議고빀 ?꾨즺 ??利됱떆 寃?됱뼱 諛섏쁺 (debounce ?놁씠)
+          // 조합 완료 후 즉시 검색어 반영 (debounce 없이)
           onSearchChange(val);
         }}
       />
@@ -73,7 +77,7 @@ const SearchBar = React.memo(({ onSearchChange, onClear }: SearchBarProps) => {
           className="clear-search"
           onMouseDown={(e) => e.preventDefault()}
           onClick={handleClear}
-        >??/button>
+        >✕</button>
       )}
     </div>
   );
@@ -81,7 +85,9 @@ const SearchBar = React.memo(({ onSearchChange, onClear }: SearchBarProps) => {
 
 const App: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(() => {
-    // toISOString()? UTC 湲곗??대씪 ?덈꼍 5~7??KST)???대㈃ ?꾨궇 ?좎쭨媛 ??    // 濡쒖뺄 ?쒓컙 湲곗??쇰줈 ?좎쭨瑜?援ы빐???쒓뎅 ?덈꼍 ?쒓컙??먮룄 ?뺥솗??    const now = new Date();
+    // toISOString()은 UTC 기준이라 새벽 5~7시(KST)에 열면 전날 날짜가 됨
+    // 로컬 시간 기준으로 날짜를 구해야 한국 새벽 시간대에도 정확함
+    const now = new Date();
     const y = now.getFullYear();
     const m = String(now.getMonth() + 1).padStart(2, '0');
     const d = String(now.getDate()).padStart(2, '0');
@@ -151,15 +157,15 @@ const App: React.FC = () => {
       const bData = entry?.breads[breadId];
       const todayWeatherEntry = entry?.weather?.find(w => w.date === dateStr);
 
-      // ?곗씠???쒗봽??Data Shift) 蹂댁젙:
-      // ?ㅻ뒛 留ㅼ옣??源붾━??鍮?媛쒖닔(?앹궛????'?댁젣 ?쒗듃'???곹엺 ?댁씪 ?앹궛?섎웾(produceQty)?낅땲??
+      // 데이터 시프트(Data Shift) 보정:
+      // 오늘 매장에 깔리는 빵 개수(생산량)는 '어제 시트'에 적힌 내일 생산수량(produceQty)입니다.
       const yesterdayDate = new Date(d);
       yesterdayDate.setDate(yesterdayDate.getDate() - 1);
       const yDateStr = yesterdayDate.toISOString().split('T')[0];
       const yesterdayEntry = allHistory.find(h => h.date === yDateStr);
       const actualProdQtyForThatDay = yesterdayEntry?.breads[breadId]?.produceQty;
 
-      // produce: false(?앹궛X)?대㈃ produceQty 臾댁떆
+      // produce: false(생산X)이면 produceQty 무시
       const shouldProduce = bData?.produce !== false;
       last7Days.push({
         prod: Number(shouldProduce ? actualProdQtyForThatDay : 0) || 0,
@@ -175,7 +181,7 @@ const App: React.FC = () => {
   };
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (isDirty && !confirm('??ν븯吏 ?딆? 蹂寃쎌궗??씠 ?덉뒿?덈떎. 怨꾩냽?섏떆寃좎뒿?덇퉴?')) return;
+    if (isDirty && !confirm('저장하지 않은 변경사항이 있습니다. 계속하시겠습니까?')) return;
     const newDate = e.target.value;
     setCurrentDate(newDate);
     loadDate(newDate);
@@ -184,7 +190,7 @@ const App: React.FC = () => {
   const isFinalized = sheet.status === 'finalized';
 
   const handleTabChange = (tab: 'edit' | 'analyze' | 'demo' | 'settings') => {
-    if (isDirty && !confirm('??ν븯吏 ?딆? 蹂寃쎌궗??씠 ?덉뒿?덈떎. 怨꾩냽?섏떆寃좎뒿?덇퉴?')) return;
+    if (isDirty && !confirm('저장하지 않은 변경사항이 있습니다. 계속하시겠습니까?')) return;
     setActiveTab(tab);
   };
 
@@ -194,17 +200,17 @@ const App: React.FC = () => {
       return rec && !rec.produce;
     });
     const dateStr = new Date(currentDate).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
-    let text = `?뜛 ${dateStr} ?앹궛 ?쒖쇅 ?덈ぉ\n\n`;
+    let text = `🍞 ${dateStr} 생산 제외 품목\n\n`;
 
     if (itemsExcluded.length === 0) {
-      text = `?뜛 ${dateStr} ?앹궛 吏?쒖꽌\n- ???덈ぉ ?뺤긽 ?앹궛\n\n`;
+      text = `🍞 ${dateStr} 생산 지시서\n- 전 품목 정상 생산\n\n`;
     } else {
       // Group items by A/B for better readability
       const groupA = itemsExcluded.filter(i => i.group === 'A');
       const groupB = itemsExcluded.filter(i => i.group === 'B');
 
       if (groupA.length > 0) {
-        text += `[湲곕낯 鍮듬쪟 ?쒖쇅]\n`;
+        text += `[기본 빵류 제외]\n`;
         groupA.forEach(item => {
           text += `- ${item.name}\n`;
         });
@@ -212,7 +218,7 @@ const App: React.FC = () => {
       }
 
       if (groupB.length > 0) {
-        text += `[湲고?/怨좊줈耳 ?쒖쇅]\n`;
+        text += `[기타/고로케 제외]\n`;
         groupB.forEach(item => {
           text += `- ${item.name}\n`;
         });
@@ -221,14 +227,14 @@ const App: React.FC = () => {
     }
 
     if (sheet.memo) {
-      text += `?뱷 硫붾え/二쇱쓽?ы빆:\n${sheet.memo}\n`;
+      text += `📝 메모/주의사항:\n${sheet.memo}\n`;
     }
 
     navigator.clipboard.writeText(text).then(() => {
-      alert('移댄넚???띿뒪???앹궛 ?쒖쇅 ?덈ぉ 以묒떖)媛 蹂듭궗?섏뿀?듬땲??');
+      alert('카톡용 텍스트(생산 제외 품목 중심)가 복사되었습니다!');
     }).catch(err => {
       console.error('Copy failed', err);
-      alert('蹂듭궗 ?ㅽ뙣. 釉뚮씪?곗? 沅뚰븳???뺤씤??二쇱꽭??');
+      alert('복사 실패. 브라우저 권한을 확인해 주세요.');
     });
   };
 
@@ -249,12 +255,12 @@ const App: React.FC = () => {
   const renderTable = (group: 'A' | 'B') => {
     const rawItems = masterBreadList.filter(item => item.group === group);
 
-    // 媛?섎떎 ?뺣젹 (寃???꾪꽣? ?낅┰?곸쑝濡??쒖꽌留?寃곗젙)
+    // 가나다 정렬 (검색 필터와 독립적으로 순서만 결정)
     const sortedItems = sortMode === 'abc'
       ? [...rawItems].sort((a, b) => a.name.localeCompare(b.name, 'ko-KR'))
       : rawItems;
 
-    // 寃?됱뼱 留ㅼ묶 ?щ? (DOM?먯꽌 ?쒓굅?섏? ?딄퀬 ?④꺼???덉씠?꾩썐 蹂??諛⑹?)
+    // 검색어 매칭 여부 (DOM에서 제거하지 않고 숨겨서 레이아웃 변동 방지)
     const matchSearch = (name: string) =>
       !searchTerm || name.includes(searchTerm);
 
@@ -265,13 +271,13 @@ const App: React.FC = () => {
         <table className="bread-table">
           <thead>
             <tr>
-              <th style={{ width: '220px' }}>鍮??대쫫</th>
-              <th>?붾웾</th>
-              <th title="湲곕?? 臾띠쓬鍮?>?먭린(湲곕?/臾띠쓬鍮?</th>
-              <th className="no-print">異붿꽭(7??</th>
-              <th>?앹궛</th>
-              <th>?댁씪({tomorrowLabel}) ?앹궛?섎웾</th>
-              <th>?덉젅?쒓컙</th>
+              <th style={{ width: '220px' }}>빵 이름</th>
+              <th>잔량</th>
+              <th title="기부와 묶음빵">폐기(기부/묶음빵)</th>
+              <th className="no-print">추세(7일)</th>
+              <th>생산</th>
+              <th>내일({tomorrowLabel}) 생산수량</th>
+              <th>품절시간</th>
             </tr>
           </thead>
           <tbody>
@@ -326,7 +332,7 @@ const App: React.FC = () => {
                       onClick={() => updateBreadRecord(item.id, { produce: !record.produce })}
                       disabled={isFinalized}
                     >
-                      {record.produce ? '?? : '??}
+                      {record.produce ? '✅' : '❌'}
                     </button>
                   </td>
                   <td>
@@ -353,7 +359,8 @@ const App: React.FC = () => {
                       <option value="">-</option>
                       {hours.map(h => (
                         <option key={h} value={`${String(h).padStart(2, '0')}:00`}>
-                          {h}??                        </option>
+                          {h}시
+                        </option>
                       ))}
                     </select>
                   </td>
@@ -361,10 +368,11 @@ const App: React.FC = () => {
                     <button
                       className="delete-bread-btn"
                       onClick={() => deleteBreadItem(item.id)}
-                      title="?덈ぉ ??젣"
+                      title="품목 삭제"
                       disabled={isFinalized}
                     >
-                      ?뿊截?                    </button>
+                      🗑️
+                    </button>
                   </td>
                 </tr>
               );
@@ -379,76 +387,76 @@ const App: React.FC = () => {
     <div className="app-container">
       <header className="app-header no-print">
         <div className="header-left">
-          <h1>?뜛 鍮??앹궛 吏?쒖꽌</h1>
+          <h1>🍞 빵 생산 지시서</h1>
           {sheet.status === 'finalized' ? (
-            <div className="status-badge finalized">?뵏 理쒖쥌 ?뺤젙??/div>
+            <div className="status-badge finalized">🔒 최종 확정됨</div>
           ) : (
-            <div className="status-badge draft">?뵑 ?묒꽦 以?(誘명솗??</div>
+            <div className="status-badge draft">🔓 작성 중 (미확정)</div>
           )}
           <nav className="tab-nav">
             <button
               className={`tab-btn ${activeTab === 'edit' ? 'active' : ''}`}
               onClick={() => handleTabChange('edit')}
             >
-              ?뱷 ?앹궛 ?낅젰
+              📝 생산 입력
             </button>
             <button
               className={`tab-btn ${activeTab === 'analyze' ? 'active' : ''}`}
               onClick={() => handleTabChange('analyze')}
             >
-              ?뱤 ?곗씠??遺꾩꽍
+              📊 데이터 분석
             </button>
             <button
               className={`tab-btn ${activeTab === 'demo' ? 'active' : ''}`}
               onClick={() => handleTabChange('demo')}
             >
-              ?㎦ ?곕え
+              🧪 데모
             </button>
             <button
               className={`tab-btn ${activeTab === 'settings' ? 'active' : ''}`}
               onClick={() => handleTabChange('settings')}
             >
-              ?숋툘 ?ㅼ젙
+              ⚙️ 설정
             </button>
           </nav>
         </div>
         <div className="header-controls">
           <input type="date" value={currentDate} onChange={handleDateChange} />
 
-          {isSyncing && <div className="sync-spinner" title="?숆린??以?..">?봽</div>}
+          {isSyncing && <div className="sync-spinner" title="동기화 중...">🔄</div>}
           {syncMessage && <span className="sync-msg">{syncMessage}</span>}
 
           <button
             className={`save-btn ${isDirty ? 'dirty' : ''}`}
             onClick={saveSheet}
           >
-            ?뮶 {isDirty ? '??ν븯湲? : '??λ맖'}
+            💾 {isDirty ? '저장하기' : '저장됨'}
           </button>
 
           {savedAt && (
             <span className="last-saved-time">
-              留덉?留???? {savedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              마지막 저장: {savedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
           )}
 
-          <button className="copy-btn" onClick={copyToKakao} title="?앹궛 紐⑸줉???띿뒪?몃줈 蹂듭궗?섏뿬 移댄넚?쇰줈 蹂대궡?몄슂">
-            ?뱥 移댄넚??蹂듭궗
+          <button className="copy-btn" onClick={copyToKakao} title="생산 목록을 텍스트로 복사하여 카톡으로 보내세요">
+            📋 카톡용 복사
           </button>
 
           {sheet.status !== 'finalized' ? (
-            <button className="finalize-btn" onClick={finalizeSheet}>?뵑 理쒖쥌 ?뺤젙?섍린</button>
+            <button className="finalize-btn" onClick={finalizeSheet}>🔓 최종 확정하기</button>
           ) : (
-            <button className="finalize-btn finalized" disabled>?뵏 理쒖쥌 ?뺤젙?꾨즺</button>
+            <button className="finalize-btn finalized" disabled>🔒 최종 확정완료</button>
           )}
 
-          <button className="print-btn" onClick={() => window.print()}>?뼥截??몄뇙?섍린</button>
+          <button className="print-btn" onClick={() => window.print()}>🖨️ 인쇄하기</button>
         </div>
       </header>
 
       <section className="weather-section">
         <div className="weather-grid">
           {sheet.weather.map((w: WeatherRecord, i: number) => (
-            <div key={w.date} className={`weather-card ${w.label === '?뱀씪' ? 'today' : ''}`}>
+            <div key={w.date} className={`weather-card ${w.label === '당일' ? 'today' : ''}`}>
               <div className="weather-label">{w.label}</div>
               <div className="weather-date">{w.date.slice(5)}</div>
               <div className="weather-display">
@@ -460,14 +468,14 @@ const App: React.FC = () => {
                     const nextIdx = (currentIdx + 1) % types.length;
                     updateWeather(i, types[nextIdx]);
                   }}
-                  title="?좎뵪 蹂寃쏀븯?ㅻ㈃ ?대┃"
+                  title="날씨 변경하려면 클릭"
                 >
-                  {w.weather ? WEATHER_ICONS[w.weather as Weather] : '??}
+                  {w.weather ? WEATHER_ICONS[w.weather as Weather] : '❓'}
                 </button>
               </div>
               <div className="weather-details">
                 {w.temp !== undefined && (
-                  <span className="weather-temp">{Math.round(w.temp)}째C</span>
+                  <span className="weather-temp">{Math.round(w.temp)}°C</span>
                 )}
                 {w.wind !== undefined && (
                   <span className="weather-wind">{w.wind.toFixed(1)}m/s</span>
@@ -476,17 +484,17 @@ const App: React.FC = () => {
             </div>
           ))}
           <div className="weather-card refresh-card">
-            <button className="refresh-weather-btn" title="API?먯꽌 ?좎뵪 ?먮룞 遺덈윭?ㅺ린" onClick={() => refreshWeather(lat, lng)}>
-              ?쎇截??먮룞 ?좎뵪<br />遺덈윭?ㅺ린
+            <button className="refresh-weather-btn" title="API에서 날씨 자동 불러오기" onClick={() => refreshWeather(lat, lng)}>
+              🛰️ 자동 날씨<br />불러오기
             </button>
           </div>
         </div>
       </section>
 
       {/* Tomorrow weather warning */}
-      {activeTab === 'edit' && !sheet.weather.find(w => w.label === '?ㅼ쓬??)?.weather && (
+      {activeTab === 'edit' && !sheet.weather.find(w => w.label === '다음날')?.weather && (
         <div className="weather-warn no-print">
-          ?좑툘 <strong>?댁씪 ?좎뵪</strong>媛 ?꾩쭅 ?낅젰?섏? ?딆븯?듬땲?? ?낅젰?섎㈃ ?앹궛 異붿쿇 ?뺥솗?꾧? ?щ씪媛묐땲??
+          ⚠️ <strong>내일 날씨</strong>가 아직 입력되지 않았습니다. 입력하면 생산 추천 정확도가 올라갑니다.
         </div>
       )}
 
@@ -502,15 +510,15 @@ const App: React.FC = () => {
                 <button
                   className={`sort-toggle-btn ${sortMode === 'abc' ? 'active' : ''}`}
                   onClick={() => setSortMode(sortMode === 'original' ? 'abc' : 'original')}
-                  title={sortMode === 'original' ? '媛?섎떎?쒖쑝濡??뺣젹' : '?먮옒 ?쒖꽌濡??뺣젹'}
+                  title={sortMode === 'original' ? '가나다순으로 정렬' : '원래 순서로 정렬'}
                 >
-                  {sortMode === 'original' ? '?봼 ?먮옒?쒖꽌' : '?뵠 媛?섎떎??}
+                  {sortMode === 'original' ? '🔃 원래순서' : '🔠 가나다순'}
                 </button>
                 <button
                   className={`add-item-toggle ${isAddingBread ? 'active' : ''}`}
                   onClick={() => setIsAddingBread(!isAddingBread)}
                 >
-                  {isAddingBread ? '痍⑥냼' : '??鍮?醫낅쪟 異붽?'}
+                  {isAddingBread ? '취소' : '➕ 빵 종류 추가'}
                 </button>
               </div>
             </div>
@@ -520,7 +528,7 @@ const App: React.FC = () => {
                 <form onSubmit={handleAddBread}>
                   <input
                     type="text"
-                    placeholder="鍮??대쫫 (?? ?뚮낫濡쒕뭇)"
+                    placeholder="빵 이름 (예: 소보로빵)"
                     value={newBread.name}
                     onChange={(e) => setNewBread({ ...newBread, name: e.target.value })}
                     required
@@ -529,37 +537,39 @@ const App: React.FC = () => {
                     value={newBread.group}
                     onChange={(e) => setNewBread({ ...newBread, group: e.target.value as 'A' | 'B' })}
                   >
-                    <option value="A">湲곕낯 鍮듬쪟 (A)</option>
-                    <option value="B">湲고? & 怨좊줈耳 (B)</option>
+                    <option value="A">기본 빵류 (A)</option>
+                    <option value="B">기타 & 고로케 (B)</option>
                   </select>
                   <input
-                    type="number"
-                    placeholder="湲곕낯 ?앹궛??
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    placeholder="기본 생산량"
                     value={newBread.defaultQty}
                     onChange={(e) => setNewBread({ ...newBread, defaultQty: e.target.value })}
                   />
-                  <button type="submit" className="submit-add-btn">異붽??섍린</button>
+                  <button type="submit" className="submit-add-btn">추가하기</button>
                 </form>
               </div>
             )}
 
             <div className="group-sections">
               <div className="section">
-                <h2>湲곕낯 鍮듬쪟 (A)</h2>
+                <h2>기본 빵류 (A)</h2>
                 {renderTable('A')}
               </div>
               <div className="section">
-                <h2>湲고? & 怨좊줈耳瑜?(B)</h2>
+                <h2>기타 & 고로케류 (B)</h2>
                 {renderTable('B')}
               </div>
             </div>
 
             <section className="memo-section">
-              <h2>?뱷 硫붾え / ?꾨떖?ы빆</h2>
+              <h2>📝 메모 / 전달사항</h2>
               <textarea
                 value={sheet.memo}
                 onChange={(e) => updateMemo(e.target.value)}
-                placeholder="?쒕뭇湲곗궗?섍퍡 ?꾨떖???댁슜???곸뼱二쇱꽭??.."
+                placeholder="제빵기사님께 전달할 내용을 적어주세요..."
                 readOnly={isFinalized}
               />
             </section>
@@ -569,23 +579,23 @@ const App: React.FC = () => {
         ) : activeTab === 'demo' ? (
           <div className="demo-section">
             <div className="demo-card">
-              <h2>?㎦ ?쒕??덉씠???곕え</h2>
-              <p>1媛쒖썡(30?? 移섏쓽 媛???먮ℓ/?먭린 ?곗씠?곕? ?먮룞?쇰줈 ?앹꽦?⑸땲??</p>
-              <p className="warning-text">?좑툘 二쇱쓽: ?꾩옱 ??λ맂 ?ㅼ젣 ?곗씠?곌? ?덉쓣 寃쎌슦 ?좎쭨媛 寃뱀튂硫???뼱?뚯썙吏????덉뒿?덈떎.</p>
+              <h2>🧪 시뮬레이션 데모</h2>
+              <p>1개월(30일) 치의 가상 판매/폐기 데이터를 자동으로 생성합니다.</p>
+              <p className="warning-text">⚠️ 주의: 현재 저장된 실제 데이터가 있을 경우 날짜가 겹치면 덮어씌워질 수 있습니다.</p>
               <button className="generate-btn" onClick={() => {
                 generateDummyData();
-                alert('30?쇱튂 媛???곗씠?곌? ?앹꽦?섏뿀?듬땲?? ?곗씠??遺꾩꽍 ??쓣 ?뺤씤??蹂댁꽭??');
+                alert('30일치 가상 데이터가 생성되었습니다. 데이터 분석 탭을 확인해 보세요!');
                 setActiveTab('analyze');
               }}>
-                30???곗씠???앹꽦?섍린
+                30일 데이터 생성하기
               </button>
               <button className="clear-demo-btn" onClick={() => {
-                if (confirm('紐⑤뱺 ?곕え ?곗씠?곕? ??젣?섏떆寃좎뒿?덇퉴? (?ㅼ젣 湲곕줉? ?좎??⑸땲??')) {
+                if (confirm('모든 데모 데이터를 삭제하시겠습니까? (실제 기록은 유지됩니다)')) {
                   clearDemoData();
-                  alert('?곕え ?곗씠?곌? ??젣?섏뿀?듬땲??');
+                  alert('데모 데이터가 삭제되었습니다.');
                 }
               }}>
-                ?곕え ?곗씠?곕쭔 ??젣?섍린
+                데모 데이터만 삭제하기
               </button>
             </div>
           </div>
@@ -593,8 +603,8 @@ const App: React.FC = () => {
           <div className="settings-section">
             <div className="settings-card">
               <div className="settings-item">
-                <h3>?숋툘 ???ㅼ젙</h3>
-                <p className="description">?뵕 援ш? ?쒗듃 ?곕룞 (?숆린??</p>
+                <h3>⚙️ 앱 설정</h3>
+                <p className="description">🔗 구글 시트 연동 (동기화)</p>
                 <div className="sync-input-group">
                   <input
                     type="text"
@@ -608,36 +618,39 @@ const App: React.FC = () => {
                     onClick={() => testSync()}
                     disabled={!syncUrl}
                   >
-                    ?뵕 ?곌껐 ?뚯뒪??                  </button>
+                    🔗 연결 테스트
+                  </button>
                 </div>
                 {syncUrl ? (
                   <div className="sync-status-info">
-                    ??二쇱냼媛 ?낅젰?섏뿀?듬땲??
+                    ✅ 주소가 입력되었습니다.
                   </div>
                 ) : (
                   <div className="sync-status-info" style={{ color: '#e74c3c' }}>
-                    ?좑툘 二쇱냼媛 ?낅젰?섏? ?딆븯?듬땲?? ??移몄뿉 援ш? ?쒗듃 二쇱냼瑜??ｌ뼱二쇱꽭??
+                    ⚠️ 주소가 입력되지 않았습니다. 위 칸에 구글 시트 주소를 넣어주세요.
                   </div>
                 )}
               </div>
 
               <div className="settings-item">
-                <h3>?뱧 留ㅼ옣 ?꾩튂 ?ㅼ젙 (?몄쿇 ?쒓뎄 媛?뺣룞)</h3>
-                <p className="description">?먮룞 ?좎뵪瑜?遺덈윭???꾩튂???꾨룄? 寃쎈룄?낅땲??</p>
+                <h3>📍 매장 위치 설정 (인천 서구 가정동)</h3>
+                <p className="description">자동 날씨를 불러올 위치의 위도와 경도입니다.</p>
                 <div className="location-input-group">
                   <div className="coord-input">
-                    <label>?꾨룄(Latitude)</label>
+                    <label>위도(Latitude)</label>
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="decimal"
                       value={lat}
                       onChange={(e) => setLat(Number(e.target.value))}
                       step="0.001"
                     />
                   </div>
                   <div className="coord-input">
-                    <label>寃쎈룄(Longitude)</label>
+                    <label>경도(Longitude)</label>
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="decimal"
                       value={lng}
                       onChange={(e) => setLng(Number(e.target.value))}
                       step="0.001"
@@ -645,21 +658,21 @@ const App: React.FC = () => {
                   </div>
                 </div>
                 <p className="help-text" style={{ fontSize: '0.8rem', opacity: 0.7, marginTop: '5px' }}>
-                  ?뮕 ?몄쿇 ?쒓뎄 媛?뺣룞 洹쇱쿂濡?湲곕낯 ?ㅼ젙?섏뼱 ?덉뒿?덈떎.
+                  💡 인천 서구 가정동 근처로 기본 설정되어 있습니다.
                 </p>
               </div>
 
               <div className="settings-item">
-                <h3>?벀 ?좎쭨 ?곗씠???대룞</h3>
-                <p className="description">?섎せ???좎쭨????λ맂 ?곗씠?곕? ?щ컮瑜??좎쭨濡???퉩?덈떎.</p>
+                <h3>📦 날짜 데이터 이동</h3>
+                <p className="description">잘못된 날짜에 저장된 데이터를 올바른 날짜로 옮깁니다.</p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <label style={{ fontSize: '0.9rem' }}>?대룞???좎쭨</label>
+                    <label style={{ fontSize: '0.9rem' }}>이동할 날짜</label>
                     <input type="date" value={moveFrom} onChange={e => setMoveFrom(e.target.value)} />
                   </div>
-                  <span style={{ fontSize: '1.2rem' }}>??/span>
+                  <span style={{ fontSize: '1.2rem' }}>→</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <label style={{ fontSize: '0.9rem' }}>??만 ?좎쭨</label>
+                    <label style={{ fontSize: '0.9rem' }}>옮길 날짜</label>
                     <input type="date" value={moveTo} onChange={e => setMoveTo(e.target.value)} />
                   </div>
                   <button
@@ -674,20 +687,20 @@ const App: React.FC = () => {
                       });
                     }}
                   >
-                    ?벀 ?대룞?섍린
+                    📦 이동하기
                   </button>
                 </div>
                 <p className="help-text" style={{ fontSize: '0.8rem', opacity: 0.7, marginTop: '8px' }}>
-                  ?뮕 ?대룞 ??援ш? ?쒗듃?먮룄 ?먮룞 諛섏쁺?⑸땲??
+                  💡 이동 후 구글 시트에도 자동 반영됩니다.
                 </p>
               </div>
 
               <div className="settings-item">
-                <h3>?뿊截??좎쭨 ?곗씠????젣</h3>
-                <p className="description">?섎せ ??λ맂 ?좎쭨???곗씠?곕? ??젣?⑸땲??</p>
+                <h3>🗑️ 날짜 데이터 삭제</h3>
+                <p className="description">잘못 저장된 날짜의 데이터를 삭제합니다.</p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <label style={{ fontSize: '0.9rem' }}>??젣???좎쭨</label>
+                    <label style={{ fontSize: '0.9rem' }}>삭제할 날짜</label>
                     <input type="date" value={deleteTarget} onChange={e => setDeleteTarget(e.target.value)} />
                   </div>
                   <button
@@ -698,22 +711,22 @@ const App: React.FC = () => {
                       setDeleteTarget('');
                     }}
                   >
-                    ?뿊截???젣?섍린
+                    🗑️ 삭제하기
                   </button>
                 </div>
                 <p className="help-text" style={{ fontSize: '0.8rem', opacity: 0.7, marginTop: '8px' }}>
-                  ?좑툘 ??젣 ??蹂듦뎄?????놁뒿?덈떎. ??湲곌린 + 援ш? ?쒗듃?먯꽌 紐⑤몢 ??젣?⑸땲??
+                  ⚠️ 삭제 후 복구할 수 없습니다. 이 기기 + 구글 시트에서 모두 삭제됩니다.
                 </p>
               </div>
 
               <section className="settings-item help">
-                <h3>???ㅼ젙 諛⑸쾿 ?꾩?留?/h3>
+                <h3>❓ 설정 방법 도움말</h3>
                 <ol>
-                  <li>援ш? ?쒗듃瑜??덈줈 ?섎굹 留뚮벊?덈떎.</li>
-                  <li><strong>[?뺤옣 ?꾨줈洹몃옩] &gt; [Apps Script]</strong>瑜??대┃?⑸땲??</li>
-                  <li>?뚯씪???쒓났??<code>google_sheets_bridge.js</code> 肄붾뱶瑜?遺숈뿬?ｌ뒿?덈떎.</li>
-                  <li><strong>[諛고룷] &gt; [??諛고룷]</strong> (?좏삎: ???? ?≪꽭??沅뚰븳: 紐⑤뱺 ?ъ슜??瑜??ㅽ뻾?⑸땲??</li>
-                  <li>?꾨즺 ???섏삤??<strong>????URL</strong>????移몄뿉 遺숈뿬?ｌ쑝硫???</li>
+                  <li>구글 시트를 새로 하나 만듭니다.</li>
+                  <li><strong>[확장 프로그램] &gt; [Apps Script]</strong>를 클릭합니다.</li>
+                  <li>파일에 제공된 <code>google_sheets_bridge.js</code> 코드를 붙여넣습니다.</li>
+                  <li><strong>[배포] &gt; [새 배포]</strong> (유형: 웹 앱, 액세스 권한: 모든 사용자)를 실행합니다.</li>
+                  <li>완료 후 나오는 <strong>웹 앱 URL</strong>을 위 칸에 붙여넣으면 끝!</li>
                 </ol>
               </section>
             </div>
@@ -722,19 +735,19 @@ const App: React.FC = () => {
       </main>
 
       <footer className="footer no-print">
-        <p>짤 2026 Bread Production App. All records are saved locally.</p>
+        <p>© 2026 Bread Production App. All records are saved locally.</p>
       </footer>
 
       {/* Print-only layout header */}
       <div className="print-header only-print">
-        <h1>?앹궛 吏?쒖꽌 ({currentDate})</h1>
+        <h1>생산 지시서 ({currentDate})</h1>
         <div className="print-weather">
-          ?좎뵪: {(() => {
-            const today = sheet.weather.find(w => w.label === '?뱀씪');
-            if (!today?.weather) return '誘멸린濡?;
+          날씨: {(() => {
+            const today = sheet.weather.find(w => w.label === '당일');
+            if (!today?.weather) return '미기록';
             let weatherStr = WEATHER_ICONS[today.weather];
-            if (today.temp !== undefined) weatherStr += ` ${Math.round(today.temp)}째C`;
-            if (today.wind !== undefined) weatherStr += ` / ?띿냽 ${today.wind.toFixed(1)}m/s`;
+            if (today.temp !== undefined) weatherStr += ` ${Math.round(today.temp)}°C`;
+            if (today.wind !== undefined) weatherStr += ` / 풍속 ${today.wind.toFixed(1)}m/s`;
             return weatherStr;
           })()}
         </div>
