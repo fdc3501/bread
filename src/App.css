@@ -389,12 +389,6 @@ select:focus {
   pointer-events: none;
 }
 
-.search-bar input {
-  width: 100%;
-  padding-left: 36px;
-  padding-right: 36px;
-  height: 42px;
-}
 
 .clear-search {
   position: absolute;
