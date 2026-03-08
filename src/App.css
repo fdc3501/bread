@@ -396,6 +396,21 @@ select:focus {
   padding-right: 36px;
   height: 42px;
   ime-mode: active;
+  /* type="search" 디폴트 스타일 제거 */
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+/* 크롬/엣지 type="search" 브라우저 자체 X 버튼 숨김 */
+.search-bar input::-webkit-search-decoration,
+.search-bar input::-webkit-search-cancel-button,
+.search-bar input::-webkit-search-results-button,
+.search-bar input::-webkit-search-results-decoration {
+  display: none;
+}
+
+input {
+  ime-mode: active;
 }
 
 .clear-search {
