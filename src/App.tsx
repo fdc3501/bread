@@ -43,13 +43,15 @@ const SearchBar = React.memo(({ onSearchChange, onClear }: SearchBarProps) => {
         ref={inputRef}
         type="text"
         lang="ko"
+        autoCapitalize="none"
+        autoCorrect="off"
+        spellCheck={false}
         // inputMode="text": number 타입 input에 포커스 후 돌아올 때 IME가 숫자모드로
         // 남아있는 문제를 방지. 브라우저/OS에 이 input이 text임을 명시적으로 알림.
         inputMode="text"
         placeholder="빵 이름을 검색하세요..."
         // value 속성 없음 → uncontrolled input
         autoComplete="off"
-        spellCheck={false}
         onChange={(e) => {
           const val = e.target.value;
           setHasContent(val.length > 0);
@@ -301,7 +303,7 @@ const App: React.FC = () => {
                   </td>
                   <td>
                     <input
-                      type="text"
+                      type="tel"
                       inputMode="numeric"
                       pattern="[0-9]*"
                       value={record.remain}
@@ -313,7 +315,7 @@ const App: React.FC = () => {
                   </td>
                   <td>
                     <input
-                      type="text"
+                      type="tel"
                       inputMode="numeric"
                       pattern="[0-9]*"
                       value={record?.disposal || ''}
@@ -338,7 +340,7 @@ const App: React.FC = () => {
                   <td>
                     {!isQuantityDisabled ? (
                       <input
-                        type="text"
+                        type="tel"
                         inputMode="numeric"
                         pattern="[0-9]*"
                         value={record.produceQty}
@@ -541,7 +543,7 @@ const App: React.FC = () => {
                     <option value="B">기타 & 고로케 (B)</option>
                   </select>
                   <input
-                    type="text"
+                    type="tel"
                     inputMode="numeric"
                     pattern="[0-9]*"
                     placeholder="기본 생산량"
