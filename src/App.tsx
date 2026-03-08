@@ -41,7 +41,7 @@ const SearchBar = React.memo(({ onSearchChange, onClear }: SearchBarProps) => {
       <span className="search-icon">🔍</span>
       <input
         ref={inputRef}
-        type="text"
+        type="search"
         lang="ko"
         autoCapitalize="none"
         autoCorrect="off"
@@ -52,6 +52,15 @@ const SearchBar = React.memo(({ onSearchChange, onClear }: SearchBarProps) => {
         placeholder="빵 이름을 검색하세요..."
         // value 속성 없음 → uncontrolled input
         autoComplete="off"
+        onFocus={(e) => {
+          // 크로미움(Edge/Chrome) 기반 브라우저에서 IME 세션이 영문(Alphanumeric)에 고정되는 현상 해결:
+          // 포커스 시 아주 짧은 순간 readOnly를 걸었다가 해제하면 브라우저가 입력을 재평가하며 IME를 초기화함.
+          const target = e.currentTarget;
+          target.readOnly = true;
+          setTimeout(() => {
+            target.readOnly = false;
+          }, 40);
+        }}
         onChange={(e) => {
           const val = e.target.value;
           setHasContent(val.length > 0);
@@ -303,8 +312,8 @@ const App: React.FC = () => {
                   </td>
                   <td>
                     <input
-                      type="tel"
-                      inputMode="numeric"
+                      type="text"
+                      lang="ko"
                       pattern="[0-9]*"
                       value={record.remain}
                       onChange={(e) => updateBreadRecord(item.id, { remain: e.target.value })}
@@ -315,8 +324,8 @@ const App: React.FC = () => {
                   </td>
                   <td>
                     <input
-                      type="tel"
-                      inputMode="numeric"
+                      type="text"
+                      lang="ko"
                       pattern="[0-9]*"
                       value={record?.disposal || ''}
                       onChange={(e) => updateBreadRecord(item.id, { disposal: e.target.value })}
@@ -340,8 +349,8 @@ const App: React.FC = () => {
                   <td>
                     {!isQuantityDisabled ? (
                       <input
-                        type="tel"
-                        inputMode="numeric"
+                        type="text"
+                        lang="ko"
                         pattern="[0-9]*"
                         value={record.produceQty}
                         onChange={(e) => updateBreadRecord(item.id, { produceQty: e.target.value })}
@@ -543,8 +552,8 @@ const App: React.FC = () => {
                     <option value="B">기타 & 고로케 (B)</option>
                   </select>
                   <input
-                    type="tel"
-                    inputMode="numeric"
+                    type="text"
+                    lang="ko"
                     pattern="[0-9]*"
                     placeholder="기본 생산량"
                     value={newBread.defaultQty}
