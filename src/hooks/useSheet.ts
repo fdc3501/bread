@@ -158,8 +158,19 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
 
             const newRecord = { ...currentRecord, ...updates };
 
-            // If the user cleared the input, we keep it as empty string so placeholder shows
-            // But when saving, it should be treated as 0 (handled in saveSheet or component)
+            // 내일 생산수량(produceQty)이 변경되었을 경우, 마스터 리스트의 기본 생산량(defaultQty)도 함께 업데이트
+            if (updates.produceQty !== undefined) {
+                const newQty = updates.produceQty === '' ? 0 : Number(updates.produceQty);
+
+                setMasterBreadList(prevMaster => {
+                    const newMaster = prevMaster.map(bread =>
+                        bread.id === breadId ? { ...bread, defaultQty: newQty } : bread
+                    );
+                    // 마스터 리스트 로컬스토리지 저장
+                    localStorage.setItem(BREAD_LIST_KEY, JSON.stringify(newMaster));
+                    return newMaster;
+                });
+            }
 
             return {
                 ...prev,
