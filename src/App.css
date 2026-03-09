@@ -113,6 +113,43 @@ button:active {
   margin-right: 8px;
 }
 
+.folder-status-msg {
+  font-size: 0.75rem;
+  color: var(--primary);
+  background: rgba(200, 162, 124, 0.1);
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(200, 162, 124, 0.3);
+  margin-right: 8px;
+}
+
+.folder-reconnect-btn {
+  background: #f39c12;
+  color: white;
+  height: 32px;
+  padding: 0 10px;
+  font-size: 0.8rem;
+  margin-right: 8px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(243, 156, 18, 0.4);
+  }
+
+  70% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 10px rgba(243, 156, 18, 0);
+  }
+
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(243, 156, 18, 0);
+  }
+}
+
 /* Settings Tab */
 .settings-section {
   padding: 20px;
@@ -1044,6 +1081,53 @@ textarea {
 .rec-compact-card:hover {
   background: rgba(255, 255, 255, 0.05);
   border-color: var(--primary);
+}
+
+/* Folder Setting Styles */
+.folder-setting-group {
+  margin: 15px 0;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.connect-folder-btn {
+  width: 100%;
+  background: var(--primary);
+  color: white;
+}
+
+.folder-connected-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.folder-connected-info .status-text {
+  font-weight: 600;
+}
+
+.folder-btns {
+  display: flex;
+  gap: 10px;
+}
+
+.folder-btns .reconnect-btn {
+  background: #f39c12;
+  color: white;
+  flex: 1;
+}
+
+.folder-btns .disconnect-btn {
+  background: var(--glass);
+  color: var(--error);
+  border: 1px solid var(--error);
+  flex: 1;
+}
+
+.folder-btns .disconnect-btn:hover {
+  background: rgba(231, 76, 60, 0.1);
 }
 
 /* Re-apply Mobile Media Query at the end */
