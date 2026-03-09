@@ -123,11 +123,10 @@ const App: React.FC = () => {
   const [newBread, setNewBread] = useState<{ name: string, group: 'A' | 'B', defaultQty: string | number }>({ name: '', group: 'A', defaultQty: '' });
 
   const {
-    sheet, masterBreadList, savedAt, isDirty, isSyncing, syncMessage, folderStatus,
+    sheet, masterBreadList, savedAt, isDirty, isSyncing, syncMessage,
     saveSheet, updateWeather, updateBreadRecord, updateMemo, loadDate,
     getAllHistory, generateDummyData, clearDemoData, testSync, finalizeSheet,
-    refreshWeather, addBreadItem, deleteBreadItem, moveSheetDate, deleteSheetDate,
-    connectFolder, disconnectFolder, requestFolderPermission
+    refreshWeather, addBreadItem, deleteBreadItem, moveSheetDate, deleteSheetDate
   } = useSheet(currentDate, syncUrl);
 
   const [moveFrom, setMoveFrom] = React.useState('');
@@ -451,16 +450,6 @@ const App: React.FC = () => {
             </span>
           )}
 
-          {/* 로컬 폴더 권한 재승인 알림 */}
-          {folderStatus === 'reconnecting' && (
-            <button className="folder-reconnect-btn" onClick={requestFolderPermission} title="폴더 접근 권한을 다시 허용해야 로컬 저장이 가능합니다.">
-              📁 권한 허용 필요
-            </button>
-          )}
-          {folderStatus === 'connected' && (
-            <span className="folder-status-msg" title="내 PC 폴더에 실시간으로 기록되고 있습니다.">📁 폴더 연결됨</span>
-          )}
-
           <button className="copy-btn" onClick={copyToKakao} title="생산 목록을 텍스트로 복사하여 카톡으로 보내세요">
             📋 카톡용 복사
           </button>
@@ -652,33 +641,6 @@ const App: React.FC = () => {
                     ⚠️ 주소가 입력되지 않았습니다. 위 칸에 구글 시트 주소를 넣어주세요.
                   </div>
                 )}
-              </div>
-
-              <div className="settings-item">
-                <h3>📁 내 PC 폴더 연동 (로컬 백업)</h3>
-                <p className="description">구글 시트 외에 내 PC의 특정 폴더에도 데이터를 자동으로 기록합니다.</p>
-                <div className="folder-setting-group">
-                  {folderStatus === 'none' ? (
-                    <button className="connect-folder-btn" onClick={connectFolder}>
-                      📁 내 PC 폴더 연결하기
-                    </button>
-                  ) : (
-                    <div className="folder-connected-info">
-                      <span className="status-text">
-                        {folderStatus === 'connected' ? '✅ 폴더가 연결되어 있습니다.' : '⚠️ 권한 승인이 필요합니다.'}
-                      </span>
-                      <div className="folder-btns">
-                        {folderStatus === 'reconnecting' && (
-                          <button className="reconnect-btn" onClick={requestFolderPermission}>권한 승인하기</button>
-                        )}
-                        <button className="disconnect-btn" onClick={disconnectFolder}>연결 해제</button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <p className="help-text" style={{ fontSize: '0.8rem', opacity: 0.7, marginTop: '8px' }}>
-                  💡 브라우저 보안 정책상 새로고침 시마다 권한 승인이 필요할 수 있습니다.
-                </p>
               </div>
 
               <div className="settings-item">
