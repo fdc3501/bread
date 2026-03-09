@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { DailySheet, BreadRecord, Weather, WeatherRecord, BreadItem, BreadGroup } from '../types';
 import { BREAD_LIST } from '../data/breads';
-import { idbStorage } from '../utils/idb-storage';
 
 const STORAGE_KEY = 'bread_production_sheets';
 const BREAD_LIST_KEY = 'bread_production_master_list';
@@ -48,64 +47,6 @@ const getEmptyBreads = (breadList: BreadItem[]): Record<string, BreadRecord> => 
 export const useSheet = (initialDate: string, syncUrl?: string) => {
     const [isSyncing, setIsSyncing] = useState(false);
     const [syncMessage, setSyncMessage] = useState<string | null>(null);
-    const [directoryHandle, setDirectoryHandle] = useState<FileSystemDirectoryHandle | null>(null);
-    const [folderStatus, setFolderStatus] = useState<'none' | 'connected' | 'reconnecting'>('none');
-
-    // 앱 로드 시 IndexedDB에서 폴더 핸들을 가져와 복원 시도
-    useEffect(() => {
-        const initFolder = async () => {
-            try {
-                const handle = await idbStorage.getDirectoryHandle();
-                if (handle) {
-                    setDirectoryHandle(handle);
-                    setFolderStatus('reconnecting');
-                }
-            } catch (e) {
-                console.error('Failed to load folder handle', e);
-            }
-        };
-        initFolder();
-    }, []);
-
-    const connectFolder = async () => {
-        try {
-            const handle = await window.showDirectoryPicker();
-            await idbStorage.setDirectoryHandle(handle);
-            setDirectoryHandle(handle);
-            setFolderStatus('connected');
-            return true;
-        } catch (e) {
-            console.error('Folder picker cancelled or failed', e);
-            return false;
-        }
-    };
-
-    const disconnectFolder = async () => {
-        await idbStorage.clearDirectoryHandle();
-        setDirectoryHandle(null);
-        setFolderStatus('none');
-    };
-
-    const requestFolderPermission = async () => {
-        if (!directoryHandle) return false;
-        try {
-            // queryPermission이 'granted'가 아니면 requestPermission 호출
-            const status = await directoryHandle.queryPermission({ mode: 'readwrite' });
-            if (status === 'granted') {
-                setFolderStatus('connected');
-                return true;
-            }
-            const newStatus = await directoryHandle.requestPermission({ mode: 'readwrite' });
-            if (newStatus === 'granted') {
-                setFolderStatus('connected');
-                return true;
-            }
-            return false;
-        } catch (e) {
-            console.error('Permission request failed', e);
-            return false;
-        }
-    };
 
     const [masterBreadList, setMasterBreadList] = useState<BreadItem[]>(() => {
         const saved = localStorage.getItem(BREAD_LIST_KEY);
@@ -193,27 +134,6 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
                 setTimeout(() => setSyncMessage(null), 5000);
             } finally {
                 setIsSyncing(false);
-            }
-        }
-
-        // --- Local Folder Save (추가된 기능) ---
-        if (directoryHandle) {
-            try {
-                // 권한 확인
-                const permission = await directoryHandle.queryPermission({ mode: 'readwrite' });
-                if (permission === 'granted') {
-                    const fileName = `bread_daily_${sheet.date}.json`;
-                    const fileHandle = await directoryHandle.getFileHandle(fileName, { create: true });
-                    const writable = await fileHandle.createWritable();
-                    await writable.write(JSON.stringify(sheetToSave, null, 2));
-                    await writable.close();
-                    console.log(`Saved to local folder: ${fileName}`);
-                } else {
-                    console.warn('Local folder permission not granted. Skipping folder save.');
-                    setFolderStatus('reconnecting');
-                }
-            } catch (e) {
-                console.error('Failed to save to local folder', e);
             }
         }
     };
@@ -781,7 +701,6 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
         isDirty,
         isSyncing,
         syncMessage,
-        folderStatus,
         saveSheet,
         updateWeather,
         updateBreadRecord,
@@ -796,9 +715,6 @@ export const useSheet = (initialDate: string, syncUrl?: string) => {
         addBreadItem,
         deleteBreadItem,
         moveSheetDate,
-        deleteSheetDate,
-        connectFolder,
-        disconnectFolder,
-        requestFolderPermission
+        deleteSheetDate
     };
 };
